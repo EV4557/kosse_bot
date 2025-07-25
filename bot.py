@@ -15,7 +15,7 @@ event_details = {
     }
 }
 
-organizer_contact = "@HROM_BOM"
+organizer_contact = "@elenaelectrodvor"
 
 main_menu = ReplyKeyboardMarkup([
     ["Купить билет", "Контакты"],
