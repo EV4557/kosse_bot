@@ -4,21 +4,15 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 CHOOSE_ACTION, CHOOSE_EVENT, ASK_QUESTION, DETAIL_QUESTION = range(4)
 
 event_details = {
-    "Концерт в Парке": {
-        "ссылка": "https://example.com/tickets/concert",
-        "цена": "Цена на 'Концерт в Парке': 1200₽",
-        "время": "Начало в 19:00",
-        "место": "Парк Горького, сцена у фонтана"
-    },
-    "Фестиваль Света": {
-        "ссылка": "https://example.com/tickets/festival",
-        "цена": "Цена на 'Фестиваль Света': 2500₽",
-        "время": "Начало в 20:30",
-        "место": "ВДНХ, павильон №1"
+    "НЕБОСВОД": {
+        "ссылка": "https://qtickets.ru/event/177134",
+        "цена": "White DC: 1000₽\nVIP: 1500₽\nКлассика без DC: 2000₽",
+        "время": "2 августа\nНачало в 19:00\nКонец в 05:00",
+        "место": "Место проведения: Правая набережная 9, «Браво Италия»"
     }
 }
 
-organizer_contact = "https://t.me/your_telegram_username"  # Замени на свою ссылку
+organizer_contact = "@HROM_BOM"
 
 main_menu = ReplyKeyboardMarkup([
     ["Купить билет", "Контакты"],
@@ -82,8 +76,8 @@ async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return CHOOSE_ACTION
 
     question = text.lower()
-    PRICE_KEYWORDS = ["цена", "цен"]
-    TIME_KEYWORDS = ["время", "времен", "когда"]
+    PRICE_KEYWORDS = ["цена", "цен", "стоимость", "сколько стоит"]
+    TIME_KEYWORDS = ["время", "времен", "когда", "во сколько"]
     PLACE_KEYWORDS = ["место", "мест", "где"]
 
     if any(word in question for word in PRICE_KEYWORDS):
