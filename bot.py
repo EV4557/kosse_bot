@@ -132,7 +132,8 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return CHOOSE_ACTION
 
 def main():
-    app = ApplicationBuilder().token("ТОКЕН").build()
+import os
+    app = ApplicationBuilder().token(os.getenv("TELEGRAM_TOKEN")).build()
 
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
