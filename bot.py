@@ -35,14 +35,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Главное меню
 async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.user_data.get("started"):
-        context.user_data["started"] = True
-        await update.message.reply_text(
-            "Привет! Я бот Electrodvor 🎟️\nВыберите, что вас интересует:",
-            reply_markup=main_menu
-        )
-        return CHOOSE_ACTION
-
     text = update.message.text
 
     if text == "Купить билет":
@@ -65,6 +57,13 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     else:
         await update.message.reply_text("Пожалуйста, выберите вариант из меню.", reply_markup=main_menu)
+        return CHOOSE_ACTION
+
+# Выбор мероприятия
+async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if text == "⬅ Назад":
+        await update.message.reply_text("Вы вернулись в главное меню.", reply_markup=main_menu)
         return CHOOSE_ACTION
 
     if text in event_details:
@@ -128,10 +127,12 @@ async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text(answer, reply_markup=main_menu)
     return CHOOSE_ACTION
 
+# Отмена
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
     return CHOOSE_ACTION
 
+# Основной запуск
 def main():
     import os
     app = ApplicationBuilder().token(os.getenv("TELEGRAM_TOKEN")).build()
