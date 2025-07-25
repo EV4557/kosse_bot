@@ -1,10 +1,8 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters, ConversationHandler
 
-# Состояния диалога
 CHOOSE_ACTION, CHOOSE_EVENT, ASK_QUESTION, DETAIL_QUESTION = range(4)
 
-# Информация о мероприятиях
 event_details = {
     "Концерт в Парке": {
         "ссылка": "https://example.com/tickets/concert",
@@ -20,16 +18,14 @@ event_details = {
     }
 }
 
-# Ссылка на контакт организатора
 organizer_contact = "https://t.me/your_telegram_username"  # Замени на свою ссылку
 
-# Главное меню
 main_menu = ReplyKeyboardMarkup([
     ["Купить билет", "Контакты"],
     ["Задать вопрос"]
 ], resize_keyboard=True)
 
-# Стартовая команда
+# Старт
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Привет! Я бот Electrodvor 🎟️\nВыберите, что вас интересует:",
@@ -37,12 +33,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return CHOOSE_ACTION
 
-# Обработка выбора действия
+# Главное меню
 async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
     if text == "Купить билет":
         keyboard = [[name] for name in event_details]
+        keyboard.append(["⬅ Назад"])
         await update.message.reply_text("Выберите мероприятие:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
         return CHOOSE_EVENT
 
@@ -51,7 +48,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return CHOOSE_ACTION
 
     elif text == "Задать вопрос":
-        keyboard = [["Цена", "Время", "Место"]]
+        keyboard = [["Цена", "Время", "Место"], ["⬅ Назад"]]
         await update.message.reply_text(
             "Вы можете выбрать один из часто задаваемых вопросов или задать свой текстом:",
             reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -62,21 +59,29 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, выберите вариант из меню.", reply_markup=main_menu)
         return CHOOSE_ACTION
 
-# Обработка выбора мероприятия
+# Выбор мероприятия
 async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    event = update.message.text
-    if event in event_details:
-        link = event_details[event]["ссылка"]
-        await update.message.reply_text(f"Вот ссылка для покупки билета на '{event}':\n{link}", reply_markup=main_menu)
+    text = update.message.text
+    if text == "⬅ Назад":
+        await update.message.reply_text("Вы вернулись в главное меню.", reply_markup=main_menu)
+        return CHOOSE_ACTION
+
+    if text in event_details:
+        link = event_details[text]["ссылка"]
+        await update.message.reply_text(f"Вот ссылка для покупки билета на '{text}':\n{link}", reply_markup=main_menu)
         return CHOOSE_ACTION
     else:
         await update.message.reply_text("Такого мероприятия нет. Выберите из списка.")
         return CHOOSE_EVENT
 
-# Обработка вопроса пользователя
+# Вопрос
 async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    question = update.message.text.lower()
+    text = update.message.text
+    if text == "⬅ Назад":
+        await update.message.reply_text("Вы вернулись в главное меню.", reply_markup=main_menu)
+        return CHOOSE_ACTION
 
+    question = text.lower()
     PRICE_KEYWORDS = ["цена", "цен"]
     TIME_KEYWORDS = ["время", "времен", "когда"]
     PLACE_KEYWORDS = ["место", "мест", "где"]
@@ -99,32 +104,35 @@ async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Я не понял вопрос. Попробуйте переформулировать.")
             return ASK_QUESTION
 
-    # Предложить выбор мероприятия
     keyboard = [[name] for name in event_details]
+    keyboard.append(["⬅ Назад"])
     await update.message.reply_text("О каком мероприятии идет речь?", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
     return DETAIL_QUESTION
 
-# Ответ на уточнённый вопрос
+# Уточнение вопроса
 async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    event = update.message.text
+    text = update.message.text
+    if text == "⬅ Назад":
+        keyboard = [["Цена", "Время", "Место"], ["⬅ Назад"]]
+        await update.message.reply_text("Выберите вопрос снова:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+        return ASK_QUESTION
+
     question_type = context.user_data.get("question_type")
 
-    if event not in event_details or question_type not in event_details[event]:
+    if text not in event_details or question_type not in event_details[text]:
         await update.message.reply_text("Что-то пошло не так. Попробуйте снова.", reply_markup=main_menu)
         return CHOOSE_ACTION
 
-    answer = event_details[event][question_type]
+    answer = event_details[text][question_type]
     await update.message.reply_text(answer, reply_markup=main_menu)
     return CHOOSE_ACTION
 
-# Отмена диалога
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
     return CHOOSE_ACTION
 
-# Запуск бота
 def main():
-    app = ApplicationBuilder().token("8082063845:AAEXePqi4ixBNVB95uzDbxbfbrLmSKG3Mh0").build()  # <-- Вставь свой токен
+    app = ApplicationBuilder().token("ТОКЕН").build()
 
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
