@@ -1,4 +1,4 @@
-from telegram import Update, ReplyKeyboardMarkup, InputFile
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
     ContextTypes, filters, ConversationHandler
@@ -23,7 +23,6 @@ main_menu = ReplyKeyboardMarkup([
     ["Дресс-код и правила посещения", "Задать вопрос"]
 ], resize_keyboard=True)
 
-
 # Старт
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -31,7 +30,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=main_menu
     )
     return CHOOSE_ACTION
-
 
 # Главное меню
 async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -62,7 +60,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"📅 Ближайшие мероприятия:\n\n{info}", reply_markup=main_menu)
         return CHOOSE_ACTION
 
-        elif text == "Немного о нас":
+    elif text == "Немного о нас":
         photo_url = "https://raw.githubusercontent.com/EV4557/electrodvor-bot/main/logo.PNG"
         short_caption = "Проект ELECTRODVOR 👇"
 
@@ -70,19 +68,19 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "ELECTRODVOR — на данный момент самое свежее веяние музыкальной и развлекательной индустрии города. "
             "Абсолютно новый арт-проект, создающий уникальные ивенты в Калининграде.\n\n"
             "Команда, запустившая ELECTRODVOR, имеет опыт проведения более 400+ ивентов, большинство из которых являются "
-            "самыми крупными и популярными для города.\n\n"
+            "самыми крупными и популярными в городе.\n\n"
             "Общая аудитория в интернете перевалила за 15 000.\n\n"
             "Проект управлял такими глобальными объектами, как бастион Астрономический — 2 года, провёл там 13 концептуальных "
             "опен-эйров и под сотню других ивентов.\n\n"
             "Такие события, как Хеллоуин, День города, Небосвод, Астероид, FULL MOON PARTY, ЗАБРОШКА, НИКИТИН, LAGUNA BEACH — "
             "одни из самых крупных и уникальных в стране.\n\n"
             "ELECTRODVOR — творческая, движущая сила города, что подтверждается самой высокой посещаемостью в области.\n\n"
-            "Основатель и продюсер проекта Евгений Зязев, творческие псевдонимы — Хром Бом, Джонни Легенда, имеет десятки кейсов "
+            "Основатель и продюсер проекта — Евгений Зязев, творческие псевдонимы — Хром Бом, Джонни Легенда, имеет десятки кейсов "
             "по созданию и успешному запуску концертных площадок и баров. Фирменный почерк в брендинге и организации мероприятий "
             "любого уровня и характера. Багаж международных и федеральных проектов.\n\n"
             "Сейчас проект полностью перешёл в формат развития электронной сцены Калининграда. "
-            "Проект насчитывает более 50-ти специалистов и участников. Команда занимается полным циклом создания мероприятий: "
-            "от барного/ресторанного менеджмента до музыкального продакшена, SMM, промо, съёмки, упаковки под ключ любой задачи.\n\n"
+            "Проект насчитывает более 50 специалистов и участников. Команда занимается полным циклом создания мероприятий: "
+            "от барного/ресторанного менеджмента до музыкального продакшна, SMM, промо, съёмки, упаковки под ключ любой задачи.\n\n"
             "С любовью,\nELECTRODVOR"
         )
 
@@ -128,8 +126,6 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return CHOOSE_ACTION
 
-
-
 # Выбор мероприятия
 async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -144,7 +140,6 @@ async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await update.message.reply_text("Такого мероприятия нет. Выберите из списка.")
         return CHOOSE_EVENT
-
 
 # Вопросы
 async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -202,7 +197,6 @@ async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return DETAIL_QUESTION
 
-
 # Уточнение вопроса
 async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -219,12 +213,10 @@ async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text(answer, reply_markup=main_menu)
     return CHOOSE_ACTION
 
-
 # Отмена
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
     return CHOOSE_ACTION
-
 
 # Основной запуск
 def main():
@@ -244,7 +236,6 @@ def main():
 
     app.add_handler(conv)
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
