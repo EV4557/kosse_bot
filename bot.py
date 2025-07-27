@@ -62,8 +62,10 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"📅 Ближайшие мероприятия:\n\n{info}", reply_markup=main_menu)
         return CHOOSE_ACTION
 
-    elif text == "Немного о нас":
-        photo_url = "https://raw.githubusercontent.com/EV4557/electrodvor-bot/refs/heads/main/logo.PNG"
+        elif text == "Немного о нас":
+        photo_url = "https://raw.githubusercontent.com/EV4557/electrodvor-bot/main/logo.PNG"
+        short_caption = "Проект ELECTRODVOR 👇"
+
         description = (
             "ELECTRODVOR — на данный момент самое свежее веяние музыкальной и развлекательной индустрии города. "
             "Абсолютно новый арт-проект, создающий уникальные ивенты в Калининграде.\n\n"
@@ -83,7 +85,9 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "от барного/ресторанного менеджмента до музыкального продакшена, SMM, промо, съёмки, упаковки под ключ любой задачи.\n\n"
             "С любовью,\nELECTRODVOR"
         )
-        await update.message.reply_photo(photo=photo_url, caption=description, reply_markup=main_menu)
+
+        await update.message.reply_photo(photo=photo_url, caption=short_caption, reply_markup=main_menu)
+        await update.message.reply_text(description, reply_markup=main_menu)
         return CHOOSE_ACTION
 
     elif text == "Дресс-код и правила посещения":
