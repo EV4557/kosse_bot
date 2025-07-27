@@ -1,4 +1,4 @@
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, InputMediaPhoto
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
     ContextTypes, filters, ConversationHandler
@@ -11,7 +11,7 @@ event_details = {
         "ссылка": "https://qtickets.ru/event/177134",
         "цена": "White DC: 1000₽\nVIP: 1500₽\nКлассика без DC: 2000₽",
         "время": "2 августа\nНачало в 19:00\nКонец в 05:00",
-        "место": "Место проведения: Правая набережная 9, «Браво Италия»"
+        "место": "Правая набережная 9, «Браво Италия»"
     }
 }
 
@@ -19,9 +19,9 @@ organizer_contact = "@elenaelectrodvor"
 
 main_menu = ReplyKeyboardMarkup([
     ["Купить билет", "Контакты"],
-    ["Задать вопрос"]
+    ["Задать вопрос", "Ближайшие мероприятия"],
+    ["Дресс-код и правила посещения", "Немного о нас"]
 ], resize_keyboard=True)
-
 
 # Старт
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -30,7 +30,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=main_menu
     )
     return CHOOSE_ACTION
-
 
 # Главное меню
 async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -63,130 +62,48 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return ASK_QUESTION
 
+    elif text == "Ближайшие мероприятия":
+        result = []
+        for name, info in event_details.items():
+            result.append(f"🎉 {name}\n📍 {info['место']}\n🕖 {info['время']}\n💳 {info['цена']}")
+        await update.message.reply_text("\n\n".join(result), reply_markup=main_menu)
+        return CHOOSE_ACTION
+
+    elif text == "Дресс-код и правила посещения":
+        await update.message.reply_text(
+            "👗 *Дресс-код и правила посещения:*\n\n"
+            "1️⃣ Белый дресс-код приветствуется (White DC)\n"
+            "2️⃣ Улыбка и хорошее настроение обязательны\n"
+            "3️⃣ Уважение к другим гостям\n"
+            "4️⃣ Не допускается пронос алкоголя и запрещённых веществ\n"
+            "5️⃣ Организаторы оставляют за собой право отказать во входе без объяснения причин",
+            reply_markup=main_menu,
+            parse_mode="Markdown"
+        )
+        return CHOOSE_ACTION
+
+    elif text == "Немного о нас":
+        await update.message.reply_photo(
+            photo="URL_ТВОЕГО_ЛОГОТИПА",
+            caption=(
+                "🎶 *История Electrodvor*\n\n"
+                "Мы начали с маленькой вечеринки для друзей, а сегодня собираем сотни единомышленников на уникальные мероприятия с особенной атмосферой, музыкой и заботой о каждом госте. "
+                "Electrodvor — это не просто вечеринки, это стиль жизни, единство и эстетика.\n\n"
+                "Присоединяйся к нашему движению ❤️"
+            ),
+            parse_mode="Markdown",
+            reply_markup=main_menu
+        )
+        return CHOOSE_ACTION
+
     else:
-        await update.message.reply_text(
-            "Пожалуйста, выберите вариант из меню.",
-            reply_markup=main_menu
-        )
+        await update.message.reply_text("Пожалуйста, выберите вариант из меню.", reply_markup=main_menu)
         return CHOOSE_ACTION
 
+# Остальные обработчики без изменений (ты можешь вставить их из своего кода):
+# handle_event_choice, handle_question, handle_detail_question, cancel
 
-# Выбор мероприятия
-async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == "⬅ Назад":
-        await update.message.reply_text(
-            "Вы вернулись в главное меню.",
-            reply_markup=main_menu
-        )
-        return CHOOSE_ACTION
-
-    if text in event_details:
-        link = event_details[text]["ссылка"]
-        await update.message.reply_text(
-            f"Вот ссылка для покупки билета на '{text}':\n{link}",
-            reply_markup=main_menu
-        )
-        return CHOOSE_ACTION
-    else:
-        await update.message.reply_text(
-            "Такого мероприятия нет. Выберите из списка."
-        )
-        return CHOOSE_EVENT
-
-
-# Вопросы
-async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == "⬅ Назад":
-        await update.message.reply_text(
-            "Вы вернулись в главное меню.",
-            reply_markup=main_menu
-        )
-        return CHOOSE_ACTION
-
-    if text == "Оформить возврат билета":
-        await update.message.reply_text(
-            f"🧾 Для оформления возврата билета напишите на {organizer_contact} и укажите следующую информацию:\n\n"
-            "1️⃣ Номер заказа\n"
-            "2️⃣ Название мероприятия\n"
-            "3️⃣ Какие билеты вы хотите вернуть\n"
-            "4️⃣ Почта, на которую был оформлен заказ\n"
-            "5️⃣ Скриншот оплаты с банка\n"
-            "6️⃣ Причина возврата\n\n"
-            "📌 Условия возврата:\n"
-            "– Более 10 дней до мероприятия — удержание 0%\n"
-            "– От 5 до 10 дней — удержание 50%\n"
-            "– От 3 до 5 дней — удержание 70%\n"
-            "– Менее 3 дней — возврат невозможен",
-            reply_markup=main_menu
-        )
-        return CHOOSE_ACTION
-
-    question = text.lower()
-    PRICE_KEYWORDS = ["цена", "цен", "стоимость", "сколько стоит"]
-    TIME_KEYWORDS = ["время", "времен", "когда", "во сколько"]
-    PLACE_KEYWORDS = ["место", "мест", "где"]
-
-    if any(word in question for word in PRICE_KEYWORDS):
-        context.user_data["question_type"] = "цена"
-    elif any(word in question for word in TIME_KEYWORDS):
-        context.user_data["question_type"] = "время"
-    elif any(word in question for word in PLACE_KEYWORDS):
-        context.user_data["question_type"] = "место"
-    else:
-        context.user_data["fail_count"] = context.user_data.get("fail_count", 0) + 1
-        if context.user_data["fail_count"] >= 2:
-            await update.message.reply_text(
-                f"Похоже, я не могу ответить на ваш вопрос 😔\nСвяжитесь с организатором: {organizer_contact}",
-                reply_markup=main_menu
-            )
-            return CHOOSE_ACTION
-        else:
-            await update.message.reply_text("Я не понял вопрос. Попробуйте переформулировать.")
-            return ASK_QUESTION
-
-    keyboard = [[name] for name in event_details]
-    keyboard.append(["⬅ Назад"])
-    await update.message.reply_text(
-        "О каком мероприятии идет речь?",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    )
-    return DETAIL_QUESTION
-
-
-# Уточнение вопроса
-async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == "⬅ Назад":
-        keyboard = [["Цена", "Время", "Место"], ["⬅ Назад"]]
-        await update.message.reply_text(
-            "Выберите вопрос снова:",
-            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        )
-        return ASK_QUESTION
-
-    question_type = context.user_data.get("question_type")
-
-    if text not in event_details or question_type not in event_details[text]:
-        await update.message.reply_text(
-            "Что-то пошло не так. Попробуйте снова.",
-            reply_markup=main_menu
-        )
-        return CHOOSE_ACTION
-
-    answer = event_details[text][question_type]
-    await update.message.reply_text(answer, reply_markup=main_menu)
-    return CHOOSE_ACTION
-
-
-# Отмена
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
-    return CHOOSE_ACTION
-
-
-# Основной запуск
+# Запуск
 def main():
     import os
     app = ApplicationBuilder().token(os.getenv("TELEGRAM_TOKEN")).build()
@@ -204,7 +121,6 @@ def main():
 
     app.add_handler(conv)
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
