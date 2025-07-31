@@ -37,6 +37,101 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return CHOOSE_ACTION
 
+# Обработка выбора мероприятия при покупке билета
+async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if text == "⬅ Назад":
+        await update.message.reply_text(
+            "Возвращаюсь в главное меню.",
+            reply_markup=main_menu
+        )
+        return CHOOSE_ACTION
+    if text in event_details:
+        link = event_details[text]["ссылка"]
+        await update.message.reply_text(
+            f"Ссылка на покупку билета для {text}:\n{link}",
+            reply_markup=main_menu
+        )
+        return CHOOSE_ACTION
+    else:
+        await update.message.reply_text(
+            "Пожалуйста, выберите мероприятие из списка или вернитесь назад.",
+            reply_markup=ReplyKeyboardMarkup([[name] for name in event_details] + [["⬅ Назад"]], resize_keyboard=True)
+        )
+        return CHOOSE_EVENT
+
+# Обработка вопросов в разделе "Задать вопрос"
+async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+
+    if text == "⬅ Назад":
+        await update.message.reply_text(
+            "Возвращаюсь в главное меню.",
+            reply_markup=main_menu
+        )
+        return CHOOSE_ACTION
+
+    question = text.lower()
+    PRICE_KEYWORDS = ["цена", "цен", "стоимость", "сколько стоит"]
+    TIME_KEYWORDS = ["время", "времен", "когда", "во сколько"]
+    PLACE_KEYWORDS = ["место", "мест", "где"]
+
+    if any(word in question for word in PRICE_KEYWORDS):
+        context.user_data["question_type"] = "цена"
+    elif any(word in question for word in TIME_KEYWORDS):
+        context.user_data["question_type"] = "время"
+    elif any(word in question for word in PLACE_KEYWORDS):
+        context.user_data["question_type"] = "место"
+    else:
+        context.user_data["fail_count"] = context.user_data.get("fail_count", 0) + 1
+        if context.user_data["fail_count"] >= 2:
+            await update.message.reply_text(
+                f"Похоже, я не могу ответить на ваш вопрос 😔\nСвяжитесь с организатором: {organizer_contact}",
+                reply_markup=main_menu
+            )
+            return CHOOSE_ACTION
+        else:
+            await update.message.reply_text("Я не понял вопрос. Попробуйте переформулировать.")
+            return ASK_QUESTION
+
+    keyboard = [[name] for name in event_details]
+    keyboard.append(["⬅ Назад"])
+    await update.message.reply_text(
+        "О каком мероприятии идёт речь?",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    )
+    return DETAIL_QUESTION
+
+# Уточнение вопроса (цена, время, место)
+async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if text == "⬅ Назад":
+        # Возврат к вопросам
+        keyboard = [
+            ["Цена", "Время", "Место", "Оформить возврат билета"],
+            ["⬅ Назад"]
+        ]
+        await update.message.reply_text(
+            "❓ Часто задаваемые вопросы:\n"
+            "• Цена — узнать стоимость билетов\n"
+            "• Время — когда начало и конец\n"
+            "• Место — где проходит мероприятие\n"
+            "• Оформить возврат билета\n\n"
+            "Выберите пункт или задайте свой вопрос:",
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        )
+        return ASK_QUESTION
+
+    question_type = context.user_data.get("question_type")
+
+    if text not in event_details or not question_type or question_type not in event_details[text]:
+        await update.message.reply_text("Что-то пошло не так. Попробуйте снова.", reply_markup=main_menu)
+        return CHOOSE_ACTION
+
+    answer = event_details[text][question_type]
+    await update.message.reply_text(answer, reply_markup=main_menu)
+    return CHOOSE_ACTION
+
 # Главное меню
 async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -57,29 +152,13 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return CHOOSE_ACTION
 
-        elif text == "Ближайшие мероприятия":
-        for name, details in event_details.items():
-            caption = (
-                f"🎉 *{name}*\n"
-                f"{details['время']}\n"
-                f"{details['место']}\n\n"
-                f"{details['цена']}\n\n"
-                f"[Купить билет]({details['ссылка']})"
-            )
-
-            # Добавляем изображение для каждого мероприятия, если есть
-            if name == "НЕБОСВОД":
-                photo_url = "https://raw.githubusercontent.com/EV4557/electrodvor-bot/main/logo.PNG"
-            elif name == "AYAWASKA PARTY":
-                photo_url = "https://raw.githubusercontent.com/EV4557/electrodvor-bot/main/ayawaska_party.png"
-            else:
-                photo_url = None
-
-            if photo_url:
-                await update.message.reply_photo(photo=photo_url, caption=caption, parse_mode="Markdown", reply_markup=main_menu)
-            else:
-                await update.message.reply_text(caption, parse_mode="Markdown", reply_markup=main_menu)
-
+    elif text == "Ближайшие мероприятия":
+        info = "\n".join(
+            f"🎉 {name}\n{event_details[name]['время']}\n{event_details[name]['место']}\n"
+            f"Билеты: {event_details[name]['ссылка']}\n"
+            for name in event_details
+        )
+        await update.message.reply_text(f"📅 Ближайшие мероприятия:\n\n{info}", reply_markup=main_menu)
         return CHOOSE_ACTION
 
     elif text == "Немного о нас":
@@ -139,6 +218,8 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Выберите пункт или задайте свой вопрос:",
             reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
+        # Сброс счетчика неудачных попыток
+        context.user_data["fail_count"] = 0
         return ASK_QUESTION
 
     else:
@@ -147,53 +228,6 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=main_menu
         )
         return CHOOSE_ACTION
-
-    question = text.lower()
-    PRICE_KEYWORDS = ["цена", "цен", "стоимость", "сколько стоит"]
-    TIME_KEYWORDS = ["время", "времен", "когда", "во сколько"]
-    PLACE_KEYWORDS = ["место", "мест", "где"]
-
-    if any(word in question for word in PRICE_KEYWORDS):
-        context.user_data["question_type"] = "цена"
-    elif any(word in question for word in TIME_KEYWORDS):
-        context.user_data["question_type"] = "время"
-    elif any(word in question for word in PLACE_KEYWORDS):
-        context.user_data["question_type"] = "место"
-    else:
-        context.user_data["fail_count"] = context.user_data.get("fail_count", 0) + 1
-        if context.user_data["fail_count"] >= 2:
-            await update.message.reply_text(
-                f"Похоже, я не могу ответить на ваш вопрос 😔\nСвяжитесь с организатором: {organizer_contact}",
-                reply_markup=main_menu
-            )
-            return CHOOSE_ACTION
-        else:
-            await update.message.reply_text("Я не понял вопрос. Попробуйте переформулировать.")
-            return ASK_QUESTION
-
-    keyboard = [[name] for name in event_details]
-    keyboard.append(["⬅ Назад"])
-    await update.message.reply_text(
-        "О каком мероприятии идёт речь?",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    )
-    return DETAIL_QUESTION
-
-# Уточнение вопроса
-async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == "⬅ Назад":
-        return await handle_question(update, context)
-
-    question_type = context.user_data.get("question_type")
-
-    if text not in event_details or question_type not in event_details[text]:
-        await update.message.reply_text("Что-то пошло не так. Попробуйте снова.", reply_markup=main_menu)
-        return CHOOSE_ACTION
-
-    answer = event_details[text][question_type]
-    await update.message.reply_text(answer, reply_markup=main_menu)
-    return CHOOSE_ACTION
 
 # Отмена
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
