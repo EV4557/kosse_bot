@@ -57,13 +57,29 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return CHOOSE_ACTION
 
-    elif text == "Ближайшие мероприятия":
-        info = "\n".join(
-            f"🎉 {name}\n{event_details[name]['время']}\n{event_details[name]['место']}\n"
-            f"Билеты: {event_details[name]['ссылка']}\n"
-            for name in event_details
-        )
-        await update.message.reply_text(f"📅 Ближайшие мероприятия:\n\n{info}", reply_markup=main_menu)
+        elif text == "Ближайшие мероприятия":
+        for name, details in event_details.items():
+            caption = (
+                f"🎉 *{name}*\n"
+                f"{details['время']}\n"
+                f"{details['место']}\n\n"
+                f"{details['цена']}\n\n"
+                f"[Купить билет]({details['ссылка']})"
+            )
+
+            # Добавляем изображение для каждого мероприятия, если есть
+            if name == "НЕБОСВОД":
+                photo_url = "https://raw.githubusercontent.com/EV4557/electrodvor-bot/main/logo.PNG"
+            elif name == "AYAWASKA PARTY":
+                photo_url = "https://raw.githubusercontent.com/EV4557/electrodvor-bot/main/ayawaska_party.png"
+            else:
+                photo_url = None
+
+            if photo_url:
+                await update.message.reply_photo(photo=photo_url, caption=caption, parse_mode="Markdown", reply_markup=main_menu)
+            else:
+                await update.message.reply_text(caption, parse_mode="Markdown", reply_markup=main_menu)
+
         return CHOOSE_ACTION
 
     elif text == "Немного о нас":
