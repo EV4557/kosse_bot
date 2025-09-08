@@ -79,18 +79,14 @@ async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
         return CHOOSE_ACTION
 
     if text in event_details:
-        event = event_details[text]
-        price = event.get("цена", "Цена не указана")
-        link = event.get("ссылка", "Ссылка не указана")
-
+        context.user_data["selected_event"] = text
+        keyboard = [["Цена", "Время", "Место", "Ссылка на билет"], ["⬅ Назад"]]
         await update.message.reply_text(
-            f"🎟️ Мероприятие: *{text}*\n\n"
-            f"{price}\n\n"
-            f"👉 Купить билет можно по ссылке: {link}",
+            f"Вы выбрали мероприятие: *{text}*.\nЧто вы хотите узнать?",
             parse_mode="Markdown",
-            reply_markup=main_menu
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
-        return CHOOSE_ACTION
+        return DETAIL_QUESTION
 
     else:
         # Если пользователь нажал что-то, чего нет в списке — снова показываем выбор
