@@ -70,32 +70,30 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return CHOOSE_ACTION
 
-async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-    event = context.user_data.get("selected_event")
-
     if text == "⬅ Назад":
         await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
         return CHOOSE_ACTION
 
-    if not event:
-        await update.message.reply_text("Выберите мероприятие заново.", reply_markup=main_menu)
-        return CHOOSE_ACTION
+    # Извлекаем название мероприятия (до " — ")
+    event_name = text.split(" — ")[0]
 
-    details = event_details.get(event, {})
+    if event_name not in event_details:
+        await update.message.reply_text("Пожалуйста, выберите мероприятие из списка.", reply_markup=main_menu)
+        return CHOOSE_EVENT
 
-    if text == "Цена":
-        answer = f"{details.get('цена', 'Цена не указана')}\n\n👉 Купить билет: {details.get('ссылка', 'Ссылка не указана')}"
-    elif text == "Время":
-        answer = details.get("время", "Время не указано")
-    elif text == "Место":
-        answer = details.get("место", "Место не указано")
-    elif text == "Ссылка на билет":
-        answer = f"👉 Купить билет можно по ссылке: {details.get('ссылка', 'Ссылка не указана')}"
-    else:
-        answer = "Пожалуйста, выберите один из вариантов."
+    context.user_data["selected_event"] = event_name
+    details = event_details[event_name]
 
-    await update.message.reply_text(answer, reply_markup=main_menu)
+    await update.message.reply_text(
+        f"Вы выбрали мероприятие: {event_name}\n\n"
+        f"Цена: {details['цена']}\n"
+        f"Ссылка на покупку: {details['ссылка']}\n"
+        f"Время: {details['время']}\n"
+        f"Место: {details['место']}",
+        reply_markup=main_menu
+    )
     return CHOOSE_ACTION
 
 # Уточнение вопроса
@@ -198,7 +196,10 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "Купить билет":
         keyboard = [[name] for name in event_details]
         keyboard.append(["⬅ Назад"])
-        await update.message.reply_text("Выберите мероприятие:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+        await update.message.reply_text(
+            "Выберите мероприятие:",
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        )
         return CHOOSE_EVENT
 
     elif text == "Контакты":
