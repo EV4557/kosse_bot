@@ -70,34 +70,33 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return CHOOSE_ACTION
 
-async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
+    event = context.user_data.get("selected_event")
 
     if text == "⬅ Назад":
         await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
         return CHOOSE_ACTION
 
-    if text in event_details:
-        # Сохраняем выбранное мероприятие
-        context.user_data["selected_event"] = text
+    if not event:
+        await update.message.reply_text("Выберите мероприятие заново.", reply_markup=main_menu)
+        return CHOOSE_ACTION
 
-        # Предлагаем выбрать, какую информацию показать
-        keyboard = [["Цена", "Время", "Место", "Ссылка на билет"], ["⬅ Назад"]]
-        await update.message.reply_text(
-            f"Вы выбрали мероприятие: *{text}*\nЧто хотите узнать?",
-            parse_mode="Markdown",
-            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        )
-        return DETAIL_QUESTION
+    details = event_details.get(event, {})
 
-    # Если пользователь нажал что-то, чего нет в списке — снова показываем выбор
-    keyboard = [[name] for name in event_details]
-    keyboard.append(["⬅ Назад"])
-    await update.message.reply_text(
-        "Пожалуйста, выберите мероприятие из списка или вернитесь назад.",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    )
-    return CHOOSE_EVENT
+    if text == "Цена":
+        answer = f"{details.get('цена', 'Цена не указана')}\n\n👉 Купить билет: {details.get('ссылка', 'Ссылка не указана')}"
+    elif text == "Время":
+        answer = details.get("время", "Время не указано")
+    elif text == "Место":
+        answer = details.get("место", "Место не указано")
+    elif text == "Ссылка на билет":
+        answer = f"👉 Купить билет можно по ссылке: {details.get('ссылка', 'Ссылка не указана')}"
+    else:
+        answer = "Пожалуйста, выберите один из вариантов."
+
+    await update.message.reply_text(answer, reply_markup=main_menu)
+    return CHOOSE_ACTION
 
 # Уточнение вопроса
 async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
