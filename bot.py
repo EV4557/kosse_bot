@@ -70,7 +70,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return CHOOSE_ACTION
 
-# Обработка выбора мероприятия при покупке билета
 async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
@@ -79,14 +78,26 @@ async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
         return CHOOSE_ACTION
 
     if text in event_details:
+        # Сохраняем выбранное мероприятие
         context.user_data["selected_event"] = text
+
+        # Предлагаем выбрать, какую информацию показать
         keyboard = [["Цена", "Время", "Место", "Ссылка на билет"], ["⬅ Назад"]]
         await update.message.reply_text(
-            f"Вы выбрали мероприятие: *{text}*.\nЧто вы хотите узнать?",
+            f"Вы выбрали мероприятие: *{text}*\nЧто хотите узнать?",
             parse_mode="Markdown",
             reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
         return DETAIL_QUESTION
+
+    else:
+        keyboard = [[name] for name in event_details]
+        keyboard.append(["⬅ Назад"])
+        await update.message.reply_text(
+            "Пожалуйста, выберите мероприятие из списка или вернитесь назад.",
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        )
+        return CHOOSE_EVENT
 
     else:
         # Если пользователь нажал что-то, чего нет в списке — снова показываем выбор
