@@ -24,6 +24,26 @@ main_menu = ReplyKeyboardMarkup([
     ["Дресс-код и правила посещения", "Задать вопрос"]
 ], resize_keyboard=True)
 
+# --- Ключевые слова ---
+PRICE_KEYWORDS = [
+    "цена", "цен", "стоимость", "сколько стоит", "билет", "прайс", "оплата", "денег", "руб", "₽"
+]
+TIME_KEYWORDS = [
+    "время", "времен", "когда", "во сколько", "расписание", "дата", "число", "сроки", "день", "начало", "окончание"
+]
+PLACE_KEYWORDS = [
+    "место", "мест", "где", "адрес", "локация", "территория", "площадка", "кемпинг", "kosse", "kosse.club", "как добраться"
+]
+RETURN_KEYWORDS = [
+    "возврат", "вернуть", "обмен", "refund", "отмена", "отменить", "сдать билет", "вернуть деньги"
+]
+CONTACT_KEYWORDS = [
+    "контакт", "связь", "телефон", "почта", "email", "организатор", "поддержка", "админ"
+]
+ABOUT_KEYWORDS = [
+    "о вас", "о клубе", "о нас", "инфо", "информация", "что такое kosse", "немного о вас", "чем занимаетесь"
+]
+
 # Старт
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -39,74 +59,23 @@ async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
         return CHOOSE_ACTION
     if text in event_details:
+        # Берем ссылку на покупку билета
         link = event_details[text]["ссылка"]
         await update.message.reply_text(
-            f"Ссылка на покупку билета для {text}:\n{link}",
+            f"Вы выбрали мероприятие: {text}\n\n"
+            f"Ссылка на покупку билета:\n{link}",
             reply_markup=main_menu
         )
         return CHOOSE_ACTION
     else:
+        # Если текст не совпадает с мероприятием — предлагаем список
+        keyboard = [[name] for name in event_details]
+        keyboard.append(["⬅ Назад"])
         await update.message.reply_text(
             "Пожалуйста, выберите мероприятие из списка или вернитесь назад.",
-            reply_markup=ReplyKeyboardMarkup([[name] for name in event_details] + [["⬅ Назад"]], resize_keyboard=True)
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
         return CHOOSE_EVENT
-
-# Обработка вопросов
-async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == "⬅ Назад":
-        await update.message.reply_text("Вы вернулись в главное меню.", reply_markup=main_menu)
-        return CHOOSE_ACTION
-
-    if "возврат" in text.lower():
-        await update.message.reply_text(
-            f"🧾 Для оформления возврата билета напишите на {organizer_contact} и укажите следующую информацию:\n\n"
-            "1️⃣ Номер заказа\n"
-            "2️⃣ Название мероприятия\n"
-            "3️⃣ Какие билеты вы хотите вернуть\n"
-            "4️⃣ Почта, на которую был оформлен заказ\n"
-            "5️⃣ Скриншот оплаты\n"
-            "6️⃣ Причина возврата\n\n"
-            "📌 Условия возврата:\n"
-            "• Более 5 дней — удержание 0%\n"
-            "• От 4 до 5 дней — удержание 50%\n"
-            "• От 3 до 4 дней — удержание 70%\n"
-            "• Менее 3 дней — возврат невозможен",
-            reply_markup=main_menu
-        )
-        return CHOOSE_ACTION
-
-    question = text.lower()
-    PRICE_KEYWORDS = ["цена", "цен", "стоимость", "сколько стоит"]
-    TIME_KEYWORDS = ["время", "времен", "когда", "во сколько"]
-    PLACE_KEYWORDS = ["место", "мест", "где"]
-
-    if any(word in question for word in PRICE_KEYWORDS):
-        context.user_data["question_type"] = "цена"
-    elif any(word in question for word in TIME_KEYWORDS):
-        context.user_data["question_type"] = "время"
-    elif any(word in question for word in PLACE_KEYWORDS):
-        context.user_data["question_type"] = "место"
-    else:
-        context.user_data["fail_count"] = context.user_data.get("fail_count", 0) + 1
-        if context.user_data["fail_count"] >= 2:
-            await update.message.reply_text(
-                f"Похоже, я не могу ответить на ваш вопрос 😔\nСвяжитесь с организатором: {organizer_contact}",
-                reply_markup=main_menu
-            )
-            return CHOOSE_ACTION
-        else:
-            await update.message.reply_text("Я не понял вопрос. Попробуйте переформулировать.")
-            return ASK_QUESTION
-
-    keyboard = [[name] for name in event_details]
-    keyboard.append(["⬅ Назад"])
-    await update.message.reply_text(
-        "О каком мероприятии идёт речь?",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    )
-    return DETAIL_QUESTION
 
 # Уточнение вопроса
 async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -137,9 +106,76 @@ async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text(answer, reply_markup=main_menu)
     return CHOOSE_ACTION
 
-# Главное меню
+# Обработка вопросов (расширенная)
+async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if text == "⬅ Назад":
+        await update.message.reply_text("Вы вернулись в главное меню.", reply_markup=main_menu)
+        return CHOOSE_ACTION
+
+    question = text.lower()
+
+    if any(word in question for word in RETURN_KEYWORDS):
+        await update.message.reply_text(
+            f"🧾 Для оформления возврата билета напишите на {organizer_contact} и укажите следующую информацию:\n\n"
+            "1️⃣ Номер заказа\n"
+            "2️⃣ Название мероприятия\n"
+            "3️⃣ Какие билеты вы хотите вернуть\n"
+            "4️⃣ Почта, на которую был оформлен заказ\n"
+            "5️⃣ Скриншот оплаты\n"
+            "6️⃣ Причина возврата\n\n"
+            "📌 Условия возврата:\n"
+            "• Более 5 дней — удержание 0%\n"
+            "• От 4 до 5 дней — удержание 50%\n"
+            "• От 3 до 4 дней — удержание 70%\n"
+            "• Менее 3 дней — возврат невозможен",
+            reply_markup=main_menu
+        )
+        return CHOOSE_ACTION
+    elif any(word in question for word in PRICE_KEYWORDS):
+        context.user_data["question_type"] = "цена"
+    elif any(word in question for word in TIME_KEYWORDS):
+        context.user_data["question_type"] = "время"
+    elif any(word in question for word in PLACE_KEYWORDS):
+        context.user_data["question_type"] = "место"
+    elif any(word in question for word in CONTACT_KEYWORDS):
+        await update.message.reply_text(f"📞 Свяжитесь с организатором:\n{organizer_contact}", reply_markup=main_menu)
+        return CHOOSE_ACTION
+    elif any(word in question for word in ABOUT_KEYWORDS):
+        photo_url = "https://raw.githubusercontent.com/EV4557/electrodvor-bot/main/logo.PNG"
+        short_caption = "Проект Kosse.club 👇"
+        description = "KOSSE.club - ..."  # Здесь можно расширить описание
+        await update.message.reply_photo(photo=photo_url, caption=short_caption, reply_markup=main_menu)
+        await update.message.reply_text(description, reply_markup=main_menu)
+        return CHOOSE_ACTION
+    else:
+        context.user_data["fail_count"] = context.user_data.get("fail_count", 0) + 1
+        if context.user_data["fail_count"] >= 2:
+            await update.message.reply_text(
+                f"Похоже, я не могу ответить на ваш вопрос 😔\nСвяжитесь с организатором: {organizer_contact}",
+                reply_markup=main_menu
+            )
+            return CHOOSE_ACTION
+        else:
+            await update.message.reply_text("Я не понял вопрос. Попробуйте переформулировать.")
+            return ASK_QUESTION
+
+    keyboard = [[name] for name in event_details]
+    keyboard.append(["⬅ Назад"])
+    await update.message.reply_text(
+        "О каком мероприятии идёт речь?",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    )
+    return DETAIL_QUESTION
+
+# Главное меню и глобальная проверка вопросов
 async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
+    question_text = text.lower()
+
+    # Если пользователь написал вопрос в любом месте
+    if any(word in question_text for word in PRICE_KEYWORDS + TIME_KEYWORDS + PLACE_KEYWORDS + RETURN_KEYWORDS + CONTACT_KEYWORDS + ABOUT_KEYWORDS):
+        return await handle_question(update, context)
 
     if text == "Купить билет":
         keyboard = [[name] for name in event_details]
@@ -161,27 +197,34 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return CHOOSE_ACTION
 
     elif text == "Немного о нас":
-        photo_url = "https://raw.githubusercontent.com/EV4557/electrodvor-bot/main/logo.PNG"
+        photo_url = "https://raw.githubusercontent.com/EV4557/KOSSE.club---bot/main/logoKosse.png"
         short_caption = "Проект Kosse.club 👇"
         description = (
-            "KOSSE.club - ..."
+            "Kosse.club — это турбаза «Кемпинг зона», созданная для проведения мероприятий семейного и бизнес-формата.\n\n"
+            "Мы предлагаем:\n"
+            "• 👨‍👩‍👧‍👦 Семейные праздники — свадьбы, дни рождения, аренда территории для личных мероприятий.\n"
+            "• 🏢 Корпоративные форматы — майсы, ивенты, тимбилдинги, ретриты.\n"
+            "• 🎯 Развлечения и активный отдых — пейнтбол, командные игры («Крокодил», «Битва Героев»).\n"
+            "• 🍷 Гастрономические программы — дегустации вин и других напитков.\n"
+            "• 🎨 Творческие мастер-классы — лепка, керамика, создание трендовых игрушек и изделий.\n\n"
+            "У нас вы найдёте всё для яркого отдыха и сплочения команды — от душевных семейных торжеств до масштабных корпоративных событий."
         )
         await update.message.reply_photo(photo=photo_url, caption=short_caption, reply_markup=main_menu)
         await update.message.reply_text(description, reply_markup=main_menu)
         return CHOOSE_ACTION
 
-elif text == "Дресс-код и правила посещения":
-    rules = (
-        "🎟️ *Правила посещения и дресс-код:*\n\n"
-        "1️⃣ Вход возможен только при наличии билета.\n"
-        "2️⃣ Каждый гость должен иметь при себе документ, удостоверяющий личность.\n"
-        "3️⃣ Организаторы оставляют за собой право отказать во входе без объяснения причин и без возврата средств.\n"
-        "4️⃣ На мероприятие не допускаются лица в спортивной, грязной или неподобающей обстановке одежде.\n"
-        "5️⃣ Ответственность за сохранность личных вещей и инвентаря турбазы несут посетители.\n"
-        "6️⃣ Запрещены: агрессивное поведение, наркотические вещества, алкогольные напитки и оружие.\n"
-        "7️⃣ Нарушители правил могут быть удалены без компенсации стоимости билета.\n\n"
-        "🙏 Спасибо за понимание и уважение к правилам!"
-    )
+    elif text == "Дресс-код и правила посещения":
+        rules = (
+            "🎟️ *Правила посещения и дресс-код:*\n\n"
+            "1️⃣ Вход возможен только при наличии билета.\n"
+            "2️⃣ Каждый гость должен иметь при себе документ, удостоверяющий личность.\n"
+            "3️⃣ Организаторы оставляют за собой право отказать во входе без объяснения причин и без возврата средств.\n"
+            "4️⃣ На мероприятие не допускаются лица в спортивной, грязной или неподобающей обстановке одежде.\n"
+            "5️⃣ Ответственность за сохранность личных вещей и инвентаря турбазы несут посетители.\n"
+            "6️⃣ Запрещены: агрессивное поведение, наркотические вещества, алкогольные напитки и оружие.\n"
+            "7️⃣ Нарушители правил могут быть удалены без компенсации стоимости билета.\n\n"
+            "🙏 Спасибо за понимание и уважение к правилам!"
+        )
         await update.message.reply_text(rules, parse_mode="Markdown", reply_markup=main_menu)
         return CHOOSE_ACTION
 
