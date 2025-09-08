@@ -90,24 +90,14 @@ async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return DETAIL_QUESTION
 
-    else:
-        keyboard = [[name] for name in event_details]
-        keyboard.append(["⬅ Назад"])
-        await update.message.reply_text(
-            "Пожалуйста, выберите мероприятие из списка или вернитесь назад.",
-            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        )
-        return CHOOSE_EVENT
-
-    else:
-        # Если пользователь нажал что-то, чего нет в списке — снова показываем выбор
-        keyboard = [[name] for name in event_details]
-        keyboard.append(["⬅ Назад"])
-        await update.message.reply_text(
-            "Пожалуйста, выберите мероприятие из списка или вернитесь назад.",
-            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        )
-        return CHOOSE_EVENT
+    # Если пользователь нажал что-то, чего нет в списке — снова показываем выбор
+    keyboard = [[name] for name in event_details]
+    keyboard.append(["⬅ Назад"])
+    await update.message.reply_text(
+        "Пожалуйста, выберите мероприятие из списка или вернитесь назад.",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    )
+    return CHOOSE_EVENT
 
 # Уточнение вопроса
 async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
