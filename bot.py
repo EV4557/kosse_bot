@@ -4,9 +4,11 @@ from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     ContextTypes, filters, ConversationHandler
 )
+print("🚀 Запускается новый код Kosse Bot!")
 
 CHOOSE_ACTION, CHOOSE_EVENT, ASK_QUESTION, DETAIL_QUESTION = range(4)
 
+# --- Информация о мероприятиях ---
 event_details = {
     "Хоровод Света": {
         "ссылка": "https://kaliningrad.qtickets.events/183804-khorovod-sveta",
@@ -18,6 +20,20 @@ event_details = {
 
 organizer_contact = "@kosse_club"
 
+ABOUT_TEXT = (
+    "Kosse.club — это турбаза «Кемпинг зона», созданная для проведения мероприятий семейного и бизнес-формата.\n\n"
+    "Мы предлагаем:\n"
+    "• 👨‍👩‍👧‍👦 Семейные праздники — свадьбы, дни рождения, аренда территории для личных мероприятий.\n"
+    "• 🏢 Корпоративные форматы — майсы, ивенты, тимбилдинги, ретриты.\n"
+    "• 🎯 Развлечения и активный отдых — пейнтбол, командные игры («Крокодил», «Битва Героев»).\n"
+    "• 🍷 Гастрономические программы — дегустации вин и других напитков.\n"
+    "• 🎨 Творческие мастер-классы — лепка, керамика, создание трендовых игрушек и изделий.\n\n"
+    "У нас вы найдёте всё для яркого отдыха и сплочения команды — от душевных семейных торжеств до масштабных корпоративных событий."
+)
+
+ABOUT_PHOTO = "https://raw.githubusercontent.com/EV4557/KOSSE.club---bot/main/logoKosse.png"
+
+# Главное меню
 main_menu = ReplyKeyboardMarkup([
     ["Купить билет", "Контакты"],
     ["Ближайшие мероприятия", "Немного о нас"],
@@ -44,6 +60,8 @@ ABOUT_KEYWORDS = [
     "о вас", "о клубе", "о нас", "инфо", "информация", "что такое kosse", "немного о вас", "чем занимаетесь"
 ]
 
+# --- Handlers ---
+
 # Старт
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -58,17 +76,24 @@ async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
     if text == "⬅ Назад":
         await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
         return CHOOSE_ACTION
+
     if text in event_details:
-        # Берем ссылку на покупку билета
         link = event_details[text]["ссылка"]
+        price = event_details[text]["цена"]
+        time = event_details[text]["время"]
+        place = event_details[text]["место"]
+
         await update.message.reply_text(
-            f"Вы выбрали мероприятие: {text}\n\n"
-            f"Ссылка на покупку билета:\n{link}",
+            f"🎉 Вы выбрали мероприятие: {text}\n\n"
+            f"{time}\n"
+            f"{place}\n\n"
+            f"{price}\n\n"
+            f"👉 Купить билет можно по ссылке: {link}",
             reply_markup=main_menu
         )
         return CHOOSE_ACTION
+
     else:
-        # Если текст не совпадает с мероприятием — предлагаем список
         keyboard = [[name] for name in event_details]
         keyboard.append(["⬅ Назад"])
         await update.message.reply_text(
@@ -106,7 +131,7 @@ async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text(answer, reply_markup=main_menu)
     return CHOOSE_ACTION
 
-# Обработка вопросов (расширенная)
+# Обработка вопросов
 async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == "⬅ Назад":
@@ -142,11 +167,8 @@ async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"📞 Свяжитесь с организатором:\n{organizer_contact}", reply_markup=main_menu)
         return CHOOSE_ACTION
     elif any(word in question for word in ABOUT_KEYWORDS):
-        photo_url = "https://raw.githubusercontent.com/EV4557/electrodvor-bot/main/logo.PNG"
-        short_caption = "Проект Kosse.club 👇"
-        description = "KOSSE.club - ..."  # Здесь можно расширить описание
-        await update.message.reply_photo(photo=photo_url, caption=short_caption, reply_markup=main_menu)
-        await update.message.reply_text(description, reply_markup=main_menu)
+        await update.message.reply_photo(photo=ABOUT_PHOTO, caption="Проект Kosse.club 👇", reply_markup=main_menu)
+        await update.message.reply_text(ABOUT_TEXT, reply_markup=main_menu)
         return CHOOSE_ACTION
     else:
         context.user_data["fail_count"] = context.user_data.get("fail_count", 0) + 1
@@ -168,12 +190,12 @@ async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return DETAIL_QUESTION
 
-# Главное меню и глобальная проверка вопросов
+# Главное меню
 async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     question_text = text.lower()
 
-    # Если пользователь написал вопрос в любом месте
+    # Проверка вопросов по ключевым словам
     if any(word in question_text for word in PRICE_KEYWORDS + TIME_KEYWORDS + PLACE_KEYWORDS + RETURN_KEYWORDS + CONTACT_KEYWORDS + ABOUT_KEYWORDS):
         return await handle_question(update, context)
 
@@ -197,20 +219,8 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return CHOOSE_ACTION
 
     elif text == "Немного о нас":
-        photo_url = "https://raw.githubusercontent.com/EV4557/KOSSE.club---bot/main/logoKosse.png"
-        short_caption = "Проект Kosse.club 👇"
-        description = (
-            "Kosse.club — это турбаза «Кемпинг зона», созданная для проведения мероприятий семейного и бизнес-формата.\n\n"
-            "Мы предлагаем:\n"
-            "• 👨‍👩‍👧‍👦 Семейные праздники — свадьбы, дни рождения, аренда территории для личных мероприятий.\n"
-            "• 🏢 Корпоративные форматы — майсы, ивенты, тимбилдинги, ретриты.\n"
-            "• 🎯 Развлечения и активный отдых — пейнтбол, командные игры («Крокодил», «Битва Героев»).\n"
-            "• 🍷 Гастрономические программы — дегустации вин и других напитков.\n"
-            "• 🎨 Творческие мастер-классы — лепка, керамика, создание трендовых игрушек и изделий.\n\n"
-            "У нас вы найдёте всё для яркого отдыха и сплочения команды — от душевных семейных торжеств до масштабных корпоративных событий."
-        )
-        await update.message.reply_photo(photo=photo_url, caption=short_caption, reply_markup=main_menu)
-        await update.message.reply_text(description, reply_markup=main_menu)
+        await update.message.reply_photo(photo=ABOUT_PHOTO, caption="Проект Kosse.club 👇", reply_markup=main_menu)
+        await update.message.reply_text(ABOUT_TEXT, reply_markup=main_menu)
         return CHOOSE_ACTION
 
     elif text == "Дресс-код и правила посещения":
@@ -230,7 +240,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif text == "Задать вопрос":
         keyboard = [
-            ["Цена", "Время", "Место", "Оформить возврат билета"],
+            ["Цена", "Время", "Место", "Возврат билета"],
             ["⬅ Назад"]
         ]
         await update.message.reply_text(
