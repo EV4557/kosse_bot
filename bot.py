@@ -1,24 +1,18 @@
 import os
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler,
+    Application, CommandHandler, MessageHandler,
     ContextTypes, filters, ConversationHandler
 )
 
 CHOOSE_ACTION, CHOOSE_EVENT, ASK_QUESTION, DETAIL_QUESTION = range(4)
 
 event_details = {
-    "НЕБОСВОД": {
-        "ссылка": "https://qtickets.ru/event/177134",
-        "цена": "🎟️ White DC — 1000₽\n💎 VIP — 1500₽\n🎩 Классика без DC — 2000₽",
-        "время": "🕖 2 августа\nНачало в 19:00, окончание в 05:00",
-        "место": "📍 Правая набережная, 9, «Браво Италия»"
-    },
-    "AYAWASKA PARTY": {
-        "ссылка": "https://qtickets.ru/event/179188",
-        "цена": "🎟️ Летний стиль, яркий лук, купальники — 1000₽ на старте\n🎩 Классика — 1500₽",
-        "время": "🕖 16 августа\nНачало в 19:00, окончание в 05:00",
-        "место": "📍 Клуб “W DoubleU”, проспект Мира 31"
+    "Хоровод Света": {
+        "ссылка": "https://kaliningrad.qtickets.events/183804-khorovod-sveta",
+        "цена": "🎟️ Дети с 4-12 — 700₽\n💎 Стандартный — 1000₽\n🎩 Все включено — 1400₽",
+        "время": "🕖 13 сентября\nНачало в 13:00, окончание в 22:00",
+        "место": "📍 Кемпинг Kosse.club, ул. Советская, 10, Янтарный."
     }
 }
 
@@ -33,7 +27,7 @@ main_menu = ReplyKeyboardMarkup([
 # Старт
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Привет! Я бот Electrodvor 🎟️\nВыберите, что вас интересует:",
+        "Привет! Я бот Kosse.club 🎟️\nВыберите, что вас интересует:",
         reply_markup=main_menu
     )
     return CHOOSE_ACTION
@@ -168,7 +162,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif text == "Немного о нас":
         photo_url = "https://raw.githubusercontent.com/EV4557/electrodvor-bot/main/logo.PNG"
-        short_caption = "Проект ELECTRODVOR 👇"
+        short_caption = "Проект Kosse.club 👇"
         description = (
             "ELECTRODVOR — на данный момент самое свежее веяние музыкальной и развлекательной индустрии города. "
             "Абсолютно новый арт-проект, создающий уникальные ивенты в Калининграде.\n\n"
@@ -221,7 +215,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Запуск
 def main():
-    app = ApplicationBuilder().token(os.getenv("TELEGRAM_TOKEN")).build()
+    app = Application.builder().token("8082063845:AAEXePqi4ixBNVB95uzDbxbfbrLmSKG3Mh0").build()
 
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -236,6 +230,7 @@ def main():
 
     app.add_handler(conv)
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()
