@@ -189,12 +189,8 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- Запуск бота ---
 def main():
     # Получаем токен из переменной окружения
-    token = os.getenv("BOT_TOKEN")
-    if not token:
-        print("❌ Ошибка: не задан BOT_TOKEN в переменных окружения!")
-        return
-
-    app = Application.builder().token(token).build()
+    TOKEN = os.environ["TELEGRAM_TOKEN"]
+    app = Application.builder().token(TOKEN).build()
 
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
