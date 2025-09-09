@@ -1,22 +1,18 @@
+import sys
+sys.path.insert(0, "/home/ispasatel/www/kosse_bot/site-packages")  # путь на сервере
 import os
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import (
+    Update, ReplyKeyboardMarkup,
+    InlineKeyboardMarkup, InlineKeyboardButton
+)
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     ContextTypes, filters, ConversationHandler
 )
+
 print("🚀 Запускается новый код Kosse Bot!")
 
-CHOOSE_ACTION, CHOOSE_EVENT, ASK_QUESTION, DETAIL_QUESTION = range(4)
-
-# --- Информация о мероприятиях ---
-event_details = {
-    "Хоровод Света": {
-        "ссылка": "https://kaliningrad.qtickets.events/183804-khorovod-sveta",
-        "цена": "🎟️ Дети с 4-12 — 700₽\n💎 Стандартный — 1000₽\n🎩 Все включено — 1400₽",
-        "время": "🕖 13 сентября\nНачало в 13:00, окончание в 22:00",
-        "место": "📍 Кемпинг Kosse.club, ул. Советская, 10, Янтарный."
-    }
-}
+CHOOSE_ACTION, ASK_QUESTION, BUY_TICKET, CHOOSE_EVENT_FOR_QUESTION = range(4)
 
 organizer_contact = "@kosse_club"
 
@@ -26,7 +22,7 @@ ABOUT_TEXT = (
     "• 👨‍👩‍👧‍👦 Семейные праздники — свадьбы, дни рождения, аренда территории для личных мероприятий.\n"
     "• 🏢 Корпоративные форматы — майсы, ивенты, тимбилдинги, ретриты.\n"
     "• 🎯 Развлечения и активный отдых — пейнтбол, командные игры («Крокодил», «Битва Героев»).\n"
-    "• 🍷 Гастрономические программы — дегустации вин и других напитков.\n"
+    "• 🍷 Гастрономические программы — дегустации вин и других напитков, сомелье сессии.\n"
     "• 🎨 Творческие мастер-классы — лепка, керамика, создание трендовых игрушек и изделий.\n\n"
     "У нас вы найдёте всё для яркого отдыха и сплочения команды — от душевных семейных торжеств до масштабных корпоративных событий."
 )
@@ -35,30 +31,28 @@ ABOUT_PHOTO = "https://raw.githubusercontent.com/EV4557/KOSSE.club---bot/main/lo
 
 # Главное меню
 main_menu = ReplyKeyboardMarkup([
-    ["Купить билет", "Контакты"],
-    ["Ближайшие мероприятия", "Немного о нас"],
-    ["Дресс-код и правила посещения", "Задать вопрос"]
+    ["Контакты", "Ближайшие мероприятия"],
+    ["Немного о нас", "Дресс-код и правила посещения"],
+    ["Задать вопрос", "Купить билет"]
 ], resize_keyboard=True)
 
-# --- Ключевые слова ---
-PRICE_KEYWORDS = [
-    "цена", "цен", "стоимость", "сколько стоит", "билет", "прайс", "оплата", "денег", "руб", "₽"
-]
-TIME_KEYWORDS = [
-    "время", "времен", "когда", "во сколько", "расписание", "дата", "число", "сроки", "день", "начало", "окончание"
-]
-PLACE_KEYWORDS = [
-    "место", "мест", "где", "адрес", "локация", "территория", "площадка", "кемпинг", "kosse", "kosse.club", "как добраться"
-]
-RETURN_KEYWORDS = [
-    "возврат", "вернуть", "обмен", "refund", "отмена", "отменить", "сдать билет", "вернуть деньги"
-]
-CONTACT_KEYWORDS = [
-    "контакт", "связь", "телефон", "почта", "email", "организатор", "поддержка", "админ"
-]
-ABOUT_KEYWORDS = [
-    "о вас", "о клубе", "о нас", "инфо", "информация", "что такое kosse", "немного о вас", "чем занимаетесь"
-]
+# Мероприятия
+EVENTS = {
+    "Хоровод Света": {
+        "ссылка": "https://kaliningrad.qtickets.events/183804-khorovod-sveta",
+        "цена": "🎟️ Дети с 4-12 — 700₽\n💎 Стандартный — 1000₽\n🎩 Все включено — 1400₽",
+        "время": "🕖 13 сентября\nНачало в 13:00, окончание в 22:00",
+        "место": "📍 Кемпинг Kosse.club, ул. Советская, 10, Янтарный."
+    }
+}
+
+# Ключевые слова
+PRICE_KEYWORDS = ["цена", "цен", "стоимость", "сколько стоит", "билет", "прайс", "оплата", "денег", "руб", "₽"]
+TIME_KEYWORDS = ["время", "времен", "когда", "во сколько", "расписание", "дата", "число", "сроки", "день", "начало", "окончание"]
+PLACE_KEYWORDS = ["место", "мест", "где", "адрес", "локация", "территория", "площадка", "кемпинг", "kosse", "kosse.club", "как добраться"]
+RETURN_KEYWORDS = ["возврат", "вернуть", "обмен", "refund", "отмена", "отменить", "сдать билет", "вернуть деньги"]
+CONTACT_KEYWORDS = ["контакт", "связь", "телефон", "почта", "email", "организатор", "поддержка", "админ"]
+ABOUT_KEYWORDS = ["о вас", "о клубе", "о нас", "инфо", "информация", "что такое kosse", "немного о вас", "чем занимаетесь"]
 
 # --- Handlers ---
 
@@ -70,71 +64,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return CHOOSE_ACTION
 
-async def handle_event_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == "⬅ Назад":
-        await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
-        return CHOOSE_ACTION
+# Обработка FAQ (выбор категории)
+async def handle_faq_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text_clean = update.message.text.strip().lower()
 
-    # Извлекаем название мероприятия (до " — ")
-    event_name = text.split(" — ")[0]
-
-    if event_name not in event_details:
-        await update.message.reply_text("Пожалуйста, выберите мероприятие из списка.", reply_markup=main_menu)
-        return CHOOSE_EVENT
-
-    context.user_data["selected_event"] = event_name
-    details = event_details[event_name]
-
-    await update.message.reply_text(
-        f"Вы выбрали мероприятие: {event_name}\n\n"
-        f"Цена: {details['цена']}\n"
-        f"Ссылка на покупку: {details['ссылка']}\n"
-        f"Время: {details['время']}\n"
-        f"Место: {details['место']}",
-        reply_markup=main_menu
-    )
-    return CHOOSE_ACTION
-
-# Уточнение вопроса
-async def handle_detail_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == "⬅ Назад":
-        keyboard = [
-            ["Цена", "Время", "Место", "Оформить возврат билета"],
-            ["⬅ Назад"]
-        ]
+    if text_clean in ["цена", "время", "место"]:
+        context.user_data["faq_type"] = text_clean
+        keyboard = [[name] for name in EVENTS.keys()] + [["⬅ Назад"]]
         await update.message.reply_text(
-            "❓ Часто задаваемые вопросы:\n"
-            "• Цена — узнать стоимость билетов\n"
-            "• Время — когда начало и конец\n"
-            "• Место — где проходит мероприятие\n"
-            "• Оформить возврат билета\n\n"
-            "Выберите пункт или задайте свой вопрос:",
+            "Выберите мероприятие, про которое хотите узнать:",
             reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
-        return ASK_QUESTION
+        return CHOOSE_EVENT_FOR_QUESTION
 
-    question_type = context.user_data.get("question_type")
-
-    if text not in event_details or not question_type or question_type not in event_details[text]:
-        await update.message.reply_text("Что-то пошло не так. Попробуйте снова.", reply_markup=main_menu)
-        return CHOOSE_ACTION
-
-    answer = event_details[text][question_type]
-    await update.message.reply_text(answer, reply_markup=main_menu)
-    return CHOOSE_ACTION
-
-# Обработка вопросов
-async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == "⬅ Назад":
-        await update.message.reply_text("Вы вернулись в главное меню.", reply_markup=main_menu)
-        return CHOOSE_ACTION
-
-    question = text.lower()
-
-    if any(word in question for word in RETURN_KEYWORDS):
+    elif text_clean == "возврат билета":
         await update.message.reply_text(
             f"🧾 Для оформления возврата билета напишите на {organizer_contact} и укажите следующую информацию:\n\n"
             "1️⃣ Номер заказа\n"
@@ -151,76 +94,80 @@ async def handle_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=main_menu
         )
         return CHOOSE_ACTION
-    elif any(word in question for word in PRICE_KEYWORDS):
-        context.user_data["question_type"] = "цена"
-    elif any(word in question for word in TIME_KEYWORDS):
-        context.user_data["question_type"] = "время"
-    elif any(word in question for word in PLACE_KEYWORDS):
-        context.user_data["question_type"] = "место"
-    elif any(word in question for word in CONTACT_KEYWORDS):
-        await update.message.reply_text(f"📞 Свяжитесь с организатором:\n{organizer_contact}", reply_markup=main_menu)
-        return CHOOSE_ACTION
-    elif any(word in question for word in ABOUT_KEYWORDS):
-        await update.message.reply_photo(photo=ABOUT_PHOTO, caption="Проект Kosse.club 👇", reply_markup=main_menu)
-        await update.message.reply_text(ABOUT_TEXT, reply_markup=main_menu)
-        return CHOOSE_ACTION
-    else:
-        context.user_data["fail_count"] = context.user_data.get("fail_count", 0) + 1
-        if context.user_data["fail_count"] >= 2:
-            await update.message.reply_text(
-                f"Похоже, я не могу ответить на ваш вопрос 😔\nСвяжитесь с организатором: {organizer_contact}",
-                reply_markup=main_menu
-            )
-            return CHOOSE_ACTION
-        else:
-            await update.message.reply_text("Я не понял вопрос. Попробуйте переформулировать.")
-            return ASK_QUESTION
 
-    keyboard = [[name] for name in event_details]
-    keyboard.append(["⬅ Назад"])
-    await update.message.reply_text(
-        "О каком мероприятии идёт речь?",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    )
-    return DETAIL_QUESTION
+    elif text_clean == "⬅ назад":
+        await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
+        return CHOOSE_ACTION
+
+    else:
+        await update.message.reply_text("Пожалуйста, выберите вариант из меню.")
+        return ASK_QUESTION
+
+# Обработка выбора мероприятия для FAQ
+async def handle_faq_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if text == "⬅ Назад":
+        await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
+        return CHOOSE_ACTION
+
+    faq_type = context.user_data.get("faq_type")
+    event_info = EVENTS.get(text)
+
+    if not event_info:
+        await update.message.reply_text("Пожалуйста, выберите мероприятие из списка.")
+        return CHOOSE_EVENT_FOR_QUESTION
+
+    if faq_type == "цена":
+        msg = f"Цена на {text}:\n{event_info.get('цена', 'Цены уточняются.')}"
+    elif faq_type == "время":
+        msg = f"Время проведения {text}:\n{event_info.get('время', 'Время уточняется.')}"
+    elif faq_type == "место":
+        msg = f"Место проведения {text}:\n{event_info.get('место', 'Место уточняется.')}"
+    else:
+        msg = "Информация недоступна."
+
+    await update.message.reply_text(msg, reply_markup=main_menu)
+    context.user_data.pop("faq_type", None)
+    return CHOOSE_ACTION
 
 # Главное меню
 async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    question_text = text.lower()
+    text_clean = update.message.text.strip().lower()
 
-    # Проверка вопросов по ключевым словам
-    if any(word in question_text for word in PRICE_KEYWORDS + TIME_KEYWORDS + PLACE_KEYWORDS + RETURN_KEYWORDS + CONTACT_KEYWORDS + ABOUT_KEYWORDS):
-        return await handle_question(update, context)
-
-    if text == "Купить билет":
-        keyboard = [[name] for name in event_details]
-        keyboard.append(["⬅ Назад"])
+    # Купить билет
+    if text_clean == "купить билет":
+        keyboard = [[event] for event in EVENTS.keys()] + [["⬅ Назад"]]
         await update.message.reply_text(
-            "Выберите мероприятие:",
+            "Выберите мероприятие для покупки билета:",
             reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
-        return CHOOSE_EVENT
+        return BUY_TICKET
 
-    elif text == "Контакты":
+    # Контакты / поддержка
+    elif any(word in text_clean for word in CONTACT_KEYWORDS + ["поддержка", "связь", "контакт"]):
         await update.message.reply_text(f"📞 Свяжитесь с организатором:\n{organizer_contact}", reply_markup=main_menu)
         return CHOOSE_ACTION
 
-    elif text == "Ближайшие мероприятия":
-        info = "\n".join(
-            f"🎉 {name}\n{event_details[name]['время']}\n{event_details[name]['место']}\n"
-            f"Билеты: {event_details[name]['ссылка']}\n"
-            for name in event_details
-        )
-        await update.message.reply_text(f"📅 Ближайшие мероприятия:\n\n{info}", reply_markup=main_menu)
+    # Ближайшие мероприятия
+    elif text_clean == "ближайшие мероприятия":
+        if not EVENTS:
+            await update.message.reply_text("📅 Список ближайших мероприятий пока пуст.", reply_markup=main_menu)
+            return CHOOSE_ACTION
+        for name, info in EVENTS.items():
+            message = f"🎉 {name}\n{info.get('время','')}\n{info.get('место','')}"
+            keyboard = [[InlineKeyboardButton("Купить билет", url=info['ссылка'])]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(message, reply_markup=reply_markup)
         return CHOOSE_ACTION
 
-    elif text == "Немного о нас":
+    # О нас
+    elif text_clean == "немного о нас":
         await update.message.reply_photo(photo=ABOUT_PHOTO, caption="Проект Kosse.club 👇", reply_markup=main_menu)
         await update.message.reply_text(ABOUT_TEXT, reply_markup=main_menu)
         return CHOOSE_ACTION
 
-    elif text == "Дресс-код и правила посещения":
+    # Дресс-код
+    elif text_clean == "дресс-код и правила посещения":
         rules = (
             "🎟️ *Правила посещения и дресс-код:*\n\n"
             "1️⃣ Вход возможен только при наличии билета.\n"
@@ -235,26 +182,41 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(rules, parse_mode="Markdown", reply_markup=main_menu)
         return CHOOSE_ACTION
 
-    elif text == "Задать вопрос":
+    # Задать вопрос
+    elif text_clean == "задать вопрос":
         keyboard = [
             ["Цена", "Время", "Место", "Возврат билета"],
             ["⬅ Назад"]
         ]
         await update.message.reply_text(
-            "❓ Часто задаваемые вопросы:\n"
-            "• Цена — узнать стоимость билетов\n"
-            "• Время — когда начало и конец\n"
-            "• Место — где проходит мероприятие\n"
-            "• Возврат билета\n\n"
-            "Выберите пункт или задайте свой вопрос:",
+            "❓ Часто задаваемые вопросы:\nВыберите категорию:",
             reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
         context.user_data["fail_count"] = 0
         return ASK_QUESTION
 
+    # Проверка ключевых слов для FAQ
+    elif any(word in text_clean for word in PRICE_KEYWORDS + TIME_KEYWORDS + PLACE_KEYWORDS + RETURN_KEYWORDS + ABOUT_KEYWORDS):
+        return await handle_faq_question(update, context)
+
+    # Любой другой текст
     else:
         await update.message.reply_text("Пожалуйста, выберите вариант из меню.", reply_markup=main_menu)
         return CHOOSE_ACTION
+
+# Обработка покупки билета
+async def handle_buy_ticket(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if text == "⬅ Назад":
+        await update.message.reply_text("Возвращаюсь в главное меню.", reply_markup=main_menu)
+        return CHOOSE_ACTION
+
+    if text in EVENTS:
+        await update.message.reply_text(f"🎫 Ссылка для покупки билета:\n{EVENTS[text]['ссылка']}", reply_markup=main_menu)
+        return CHOOSE_ACTION
+    else:
+        await update.message.reply_text("Пожалуйста, выберите мероприятие из списка.")
+        return BUY_TICKET
 
 # Отмена
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -269,16 +231,15 @@ def main():
         entry_points=[CommandHandler("start", start)],
         states={
             CHOOSE_ACTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_action)],
-            CHOOSE_EVENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_event_choice)],
-            ASK_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_question)],
-            DETAIL_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_detail_question)],
+            ASK_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_faq_question)],
+            CHOOSE_EVENT_FOR_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_faq_event)],
+            BUY_TICKET: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buy_ticket)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
     app.add_handler(conv)
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
