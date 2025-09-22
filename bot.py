@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(0, "/home/ispasatel/www/kosse_bot/site-packages")  # путь к сторонним библиотекам
 import os
+import json
 import datetime
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters, ConversationHandler, CallbackQueryHandler
