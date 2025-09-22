@@ -399,7 +399,7 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== ЗАПУСК БОТА ==================
 def main():
-    TOKEN = "8319829785:AAFNb488RWm4reclq286Bv3b5HtDGQKh7DQ"
+    TOKEN = "8244050011:AAGP565NclU046a-WsP-nO8hNOcvkwQCh0U"
     if not TOKEN:
         raise ValueError("⚠️ Токен не найден! Проверьте .env")
 
