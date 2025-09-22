@@ -44,8 +44,11 @@ events_menu = ReplyKeyboardMarkup([
 # ================== GOOGLE SHEETS ==================
 def get_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    cred_path = os.getenv("GOOGLE_CREDS_PATH", "credentials.json")
-    creds = ServiceAccountCredentials.from_json_keyfile_name(cred_path, scope)
+    creds_json = os.getenv("GOOGLE_CREDS_JSON")
+    if not creds_json:
+        raise ValueError("⚠️ GOOGLE_CREDS_JSON не найден! Добавьте переменную окружения на Railway")
+    creds_dict = json.loads(creds_json)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     return gspread.authorize(creds)
 
 def load_events_from_sheets():
