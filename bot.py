@@ -395,7 +395,7 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== ЗАПУСК БОТА ==================
 def main():
-    TOKEN = os.getenv("TELEGRAM_TOKEN")
+    TOKEN = "8319829785:AAFNb488RWm4reclq286Bv3b5HtDGQKh7DQ"
     if not TOKEN:
         raise ValueError("⚠️ Токен не найден! Проверьте .env")
 
