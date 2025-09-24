@@ -2,8 +2,8 @@ import sys
 sys.path.insert(0, "/home/ispasatel/www/kosse_bot/site-packages")  # путь к сторонним библиотекам
 import os
 import json
+from datetime import datetime, time
 import pytz
-import datetime
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters, ConversationHandler, CallbackQueryHandler
 
@@ -356,12 +356,7 @@ async def restart_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=start_menu
     )
     return ConversationHandler.END
-
 # ================== РАССЫЛКА ==================
-import pytz
-from datetime import datetime, time
-
-# Таймзона Калининграда
 kaliningrad_tz = pytz.timezone("Europe/Kaliningrad")
 
 async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
@@ -385,7 +380,7 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
             continue
         total = info["total"]
         if total >= 0:
-            continue  # нет задолженности
+            continue
 
         last_sent = REMINDER_LAST_SENT.get(account_number)
         send_message = False
@@ -415,9 +410,10 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
         print(f"✅ Рассылка выполнена ({now.strftime('%d.%m.%Y %H:%M')}) — сообщений отправлено: {sent_count}")
     else:
         print(f"⚠️ Рассылка выполнена ({now.strftime('%d.%m.%Y %H:%M')}) — сообщений не отправлено")
+
 # ================== ЗАПУСК БОТА ==================
 def main():
-    TOKEN = "8244050011:AAGP565NclU046a-WsP-nO8hNOcvkwQCh0U"
+    TOKEN = os.getenv("8244050011:AAGP565NclU046a-WsP-nO8hNOcvkwQCh0U")  # советую хранить в .env
     if not TOKEN:
         raise ValueError("⚠️ Токен не найден! Проверьте .env")
 
@@ -434,7 +430,7 @@ def main():
             CHOOSE_EVENT_FOR_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_faq_event)],
             BUY_TICKET: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buy_ticket)],
             ASK_ACCOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_account)],
-          },
+        },
         fallbacks=[
             CommandHandler("start", start),
             MessageHandler(filters.ALL, restart_dialog)
