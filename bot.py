@@ -100,7 +100,7 @@ def get_rent_info(account_number):
         if not all_rows or len(all_rows) < 3:
             return {"error": "❌ Лист пустой или нет данных."}
 
-        now = datetime.datetime.now()
+        now = datetime.now()
         month_name = now.strftime("%B").capitalize()
         month_rus = {
             "January":"Январь","February":"Февраль","March":"Март","April":"Апрель",
