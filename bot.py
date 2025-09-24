@@ -413,7 +413,7 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== ЗАПУСК БОТА ==================
 def main():
-    TOKEN = os.getenv("8244050011:AAGP565NclU046a-WsP-nO8hNOcvkwQCh0U")  # советую хранить в .env
+    TOKEN = "8244050011:AAGP565NclU046a-WsP-nO8hNOcvkwQCh0U" # советую хранить в .env
     if not TOKEN:
         raise ValueError("⚠️ Токен не найден! Проверьте .env")
 
