@@ -100,7 +100,6 @@ def get_rent_info(account_number):
         if not all_rows or len(all_rows) < 3:
             return {"error": "❌ Лист пустой или нет данных."}
 
-        # Текущий месяц и год
         now = datetime.datetime.now()
         month_name = now.strftime("%B").capitalize()
         month_rus = {
@@ -110,7 +109,6 @@ def get_rent_info(account_number):
         }[month_name]
         current_month = f"{month_rus} {now.year}"
 
-        # Столбец лицевых счетов (A)
         account_col_idx = 0
         account_row = None
         account_number_str = str(account_number).strip()
@@ -121,7 +119,6 @@ def get_rent_info(account_number):
         if not account_row:
             return {"error": f"❌ Лицевой счёт {account_number} не найден."}
 
-        # Колонка нужного месяца
         header_row = all_rows[0]
         month_col_idx = None
         for idx, val in enumerate(header_row):
@@ -347,6 +344,7 @@ async def handle_account(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return CHOOSE_ACTION
 
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Главное меню:", reply_markup=start_menu)
     return CHOOSE_ACTION
@@ -358,7 +356,6 @@ async def restart_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=start_menu
     )
     return ConversationHandler.END
-# ================== РАССЫЛКА ==================
 
 # ================== РАССЫЛКА ==================
 async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
@@ -407,7 +404,6 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 print(f"❌ Ошибка отправки на {chat_id}: {e}")
 
-    # Итоговый отчёт в консоль
     if sent_count > 0:
         print(f"✅ Рассылка выполнена ({now.strftime('%d.%m.%Y %H:%M')}) — сообщений отправлено: {sent_count}")
     else:
@@ -435,7 +431,7 @@ def main():
           },
         fallbacks=[
             CommandHandler("start", start),
-            MessageHandler(filters.ALL, restart_dialog)  # добавляем авто-сброс
+            MessageHandler(filters.ALL, restart_dialog)
         ],
     )
 
@@ -452,12 +448,9 @@ def main():
     async def auto_refresh_rent(context: ContextTypes.DEFAULT_TYPE):
         load_rent_sheet()
 
-    # каждые 10 минут обновляем список мероприятий и аренду
     app.job_queue.run_repeating(auto_refresh_events, interval=600, first=10)
     app.job_queue.run_repeating(auto_refresh_rent, interval=600, first=10)
 
-    # проверка должников каждый день, но рассылка только с 24 числа
-    # запускать в 16:00 по Москве каждый день
     moscow_tz = pytz.timezone("Europe/Moscow")
     target_time = datetime.time(hour=16, minute=0, tzinfo=moscow_tz)
     app.job_queue.run_daily(send_rent_reminders, time=target_time)
