@@ -2,6 +2,7 @@ import sys
 sys.path.insert(0, "/home/ispasatel/www/kosse_bot/site-packages")  # путь к сторонним библиотекам
 import os
 import json
+import pytz
 import datetime
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters, ConversationHandler, CallbackQueryHandler
@@ -351,8 +352,22 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return CHOOSE_ACTION
 
 # ================== РАССЫЛКА ==================
+
 async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(pytz.timezone("Europe/Moscow"))
+
+    # Рассылка только с 24 по 2 число включительно
+    if now.day < 24 and now.month != 2:  # февраль отдельно, чтобы не сломать
+        return
+    if now.day > 2 and now.day < 24:
+        return
+
+    # Разрешаем только 24-го, 26-го, 28-го, 30-го и 1-го, 2-го числа
+    # Проверка "каждые два дня"
+    if now.day >= 24 or now.day <= 2:
+        if not ((now.day - 24) % 2 == 0 or now.day in [1, 2]):
+            return
+
     load_rent_sheet(force=True)
 
     for row in RENT_DATA[2:]:
@@ -371,31 +386,21 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
         if total >= 0:
             continue  # нет задолженности
 
-        last_sent = REMINDER_LAST_SENT.get(account_number)
-
-        # только с 25 числа и каждые 3 дня после последнего напоминания
-        send_message = False
-        if now.day == 25 and not last_sent:
-            send_message = True
-        elif last_sent and (now - last_sent).days >= 3:
-            send_message = True
-
-        if send_message:
-            text_message = (
-                f"Здравствуйте, уважаемый абонент!\n\n"
-                f"Информируем, что абонентская плата желательна до 3-го числа текущего месяца "
-                f"(согласно п. 4.1.1 договора аренды оборудования).\n\n"
-                f"Баланс на сегодня: {abs(total)} р.\n"
-                "Оплатить Вы можете путем перевода суммы на карту Т-Банк по номеру +79062385238 (Валентина Савватиевна А.).\n\n"
-                "Напоминаем, что квитанцию об оплате необходимо прислать на этот номер.\n"
-                "Желаем хорошего вечера! С уважением, ГК ТырНэт.рф!"
-            )
-            try:
-                await context.bot.send_message(chat_id=chat_id, text=text_message)
-                REMINDER_LAST_SENT[account_number] = now
-                print(f"📤 Сообщение отправлено на {chat_id}")
-            except Exception as e:
-                print(f"❌ Ошибка отправки на {chat_id}: {e}")
+        text_message = (
+            f"Здравствуйте, уважаемый абонент!\n\n"
+            f"Напоминаем, что абонентская плата должна быть внесена **до 3-го числа** текущего месяца "
+            f"(согласно п. 4.1.1 договора).\n\n"
+            f"Баланс на сегодня: {abs(total)} р.\n\n"
+            "⚠️ Если оплата не поступит до 3-го числа, сумма задолженности будет увеличена!\n\n"
+            "Оплатить можно переводом на карту Т-Банк по номеру +79062385238 (Валентина Савватиевна А.).\n"
+            "Квитанцию об оплате необходимо прислать на этот номер.\n\n"
+            "С уважением, ГК ТырНэт.рф!"
+        )
+        try:
+            await context.bot.send_message(chat_id=chat_id, text=text_message, parse_mode="Markdown")
+            print(f"📤 Напоминание отправлено на {chat_id}")
+        except Exception as e:
+            print(f"❌ Ошибка отправки на {chat_id}: {e}")
 
 # ================== ЗАПУСК БОТА ==================
 def main():
@@ -437,8 +442,11 @@ def main():
     app.job_queue.run_repeating(auto_refresh_events, interval=600, first=10)
     app.job_queue.run_repeating(auto_refresh_rent, interval=600, first=10)
 
-    # проверка должников каждый день, но рассылка только с 25 числа
-    app.job_queue.run_repeating(send_rent_reminders, interval=86400, first=3600)
+    # проверка должников каждый день, но рассылка только с 24 числа
+    # запускать в 16:00 по Москве каждый день
+    moscow_tz = pytz.timezone("Europe/Moscow")
+    target_time = datetime.time(hour=16, minute=0, tzinfo=moscow_tz)
+    app.job_queue.run_daily(send_rent_reminders, time=target_time)
 
     print("🚀 Бот запущен и готов к работе!")
     app.run_polling()
