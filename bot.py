@@ -84,7 +84,7 @@ REMINDER_LAST_SENT = {}  # чтобы учитывать дату последн
 
 def load_rent_sheet(force=False):
     global RENT_DATA, RENT_LAST_UPDATE
-    now = datetime.datetime.now().timestamp()
+    now = datetime.now().timestamp()
     if force or RENT_DATA is None or RENT_LAST_UPDATE is None or (now - RENT_LAST_UPDATE) > RENT_UPDATE_INTERVAL:
         client = get_client()
         rent_sheet_id = os.getenv("GOOGLE_SHEET_RENT_ID")
