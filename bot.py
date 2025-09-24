@@ -350,7 +350,14 @@ async def handle_account(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Главное меню:", reply_markup=start_menu)
     return CHOOSE_ACTION
-
+    
+async def restart_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🔄 Бот был перезапущен.\n"
+        "Возвращаемся в главное меню 👇",
+        reply_markup=start_menu
+    )
+    return ConversationHandler.END
 # ================== РАССЫЛКА ==================
 
 # ================== РАССЫЛКА ==================
@@ -425,8 +432,11 @@ def main():
             CHOOSE_EVENT_FOR_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_faq_event)],
             BUY_TICKET: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buy_ticket)],
             ASK_ACCOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_account)],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)],
+          },
+        fallbacks=[
+            CommandHandler("start", start),
+            MessageHandler(filters.ALL, restart_dialog)  # добавляем авто-сброс
+        ],
     )
 
     app.add_handler(conv)
