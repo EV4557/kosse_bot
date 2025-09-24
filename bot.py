@@ -358,11 +358,18 @@ async def restart_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 # ================== РАССЫЛКА ==================
-async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
-    now = datetime.datetime.now()
-    load_rent_sheet(force=True)
+import pytz
+from datetime import datetime, time
 
-    sent_count = 0  # счётчик успешных отправок
+# Таймзона Калининграда
+kaliningrad_tz = pytz.timezone("Europe/Kaliningrad")
+
+async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
+    now = datetime.now(kaliningrad_tz)
+    load_rent_sheet(force=True)
+    sent_count = 0
+
+    print(f"📬 send_rent_reminders triggered at {now.strftime('%d.%m.%Y %H:%M:%S')}")
 
     for row in RENT_DATA[2:]:
         if len(row) < 2:
@@ -383,8 +390,8 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
         last_sent = REMINDER_LAST_SENT.get(account_number)
         send_message = False
 
-        # Рассылка с 24 числа 16:00, каждые 2 дня, до 3 числа
-        if now.day == 24 and now.hour == 16 and not last_sent:
+        # Рассылка 24 числа в 15:25 и каждые 2 дня до 3 числа
+        if now.day == 24 and now.hour == 15 and now.minute >= 25 and not last_sent:
             send_message = True
         elif last_sent and (now - last_sent).days >= 2 and now.day < 3:
             send_message = True
@@ -408,7 +415,6 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
         print(f"✅ Рассылка выполнена ({now.strftime('%d.%m.%Y %H:%M')}) — сообщений отправлено: {sent_count}")
     else:
         print(f"⚠️ Рассылка выполнена ({now.strftime('%d.%m.%Y %H:%M')}) — сообщений не отправлено")
-
 # ================== ЗАПУСК БОТА ==================
 def main():
     TOKEN = "8244050011:AAGP565NclU046a-WsP-nO8hNOcvkwQCh0U"
@@ -451,8 +457,7 @@ def main():
     app.job_queue.run_repeating(auto_refresh_events, interval=600, first=10)
     app.job_queue.run_repeating(auto_refresh_rent, interval=600, first=10)
 
-    moscow_tz = pytz.timezone("Europe/Moscow")
-    target_time = datetime.time(hour=16, minute=0, tzinfo=moscow_tz)
+    target_time = time(hour=15, minute=25, tzinfo=kaliningrad_tz)
     app.job_queue.run_daily(send_rent_reminders, time=target_time)
 
     print("🚀 Бот запущен и готов к работе!")
