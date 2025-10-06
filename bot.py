@@ -459,7 +459,7 @@ def main():
 
     # Планируем рассылку на 7 октября 2025 в 20:40 и 9 октября 2025 в 14:00
     send_times = [
-        datetime(2025, 10, 7, 20, 40, tzinfo=kaliningrad_tz),
+        datetime(2025, 10, 6, 20, 50, tzinfo=kaliningrad_tz),
         datetime(2025, 10, 9, 14, 0, tzinfo=kaliningrad_tz),
     ]
 
