@@ -6,7 +6,10 @@ from datetime import datetime, time
 import pytz
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters, ConversationHandler, CallbackQueryHandler
+import pytz
+from datetime import time
 
+kaliningrad_tz = pytz.timezone("Europe/Kaliningrad")
 # --- Работа с Google Sheets ---
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
