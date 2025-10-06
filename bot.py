@@ -360,11 +360,14 @@ async def restart_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
 kaliningrad_tz = pytz.timezone("Europe/Kaliningrad")
 
 async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
+    """Рассылка уведомлений об оплате аренды (24, 26, 28 и 2 числа каждого месяца)."""
     now = datetime.now(kaliningrad_tz)
+    day = now.day
     load_rent_sheet(force=True)
     sent_count = 0
+    sent_to = []
 
-    print(f"📬 send_rent_reminders triggered at {now.strftime('%d.%m.%Y %H:%M:%S')}")
+    print(f"📬 Рассылка запущена: {now.strftime('%d.%m.%Y %H:%M:%S')}")
 
     for row in RENT_DATA[2:]:
         if len(row) < 2:
@@ -380,39 +383,56 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
             continue
         total = info["total"]
         if total >= 0:
-            continue
+            continue  # рассылка только при наличии долга
 
-        last_sent = REMINDER_LAST_SENT.get(account_number)
-        send_message = False
-
-        # Рассылка 24 числа в 15:35 и каждые 2 дня до 3 числа
-        if now.day == 24 and now.hour == 15 and now.minute >= 35 and not last_sent:
-            send_message = True
-        elif last_sent and (now - last_sent).days >= 2 and now.day < 3:
-            send_message = True
-
-        if send_message:
+        # Тексты по дате
+        if day == 6:
             text_message = (
                 f"Здравствуйте, уважаемый абонент!\n\n"
-                f"Информируем, что абонентская плата желательна до 3-го числа текущего месяца.\n\n"
-                f"Баланс на сегодня: {abs(total)} р.\n"
-                "Оплатить можно переводом на карту Т-Банк по номеру +79062385238 (Валентина Савватиевна А.).\n\n"
-                "⚠️ Если оплата не поступит до 3 числа, сумма задолженности увеличится."
+                f"📅 Приближается срок оплаты за {info['month']}.\n"
+                f"💰 Баланс на сегодня: {abs(total)} руб.\n\n"
+                "Пожалуйста, внесите оплату до 3-го числа текущего месяца.\n\n"
+                "Оплата возможна переводом на карту Т-Банк по номеру "
+                "+79062385238 (Валентина Савватиевна А.)\n\n"
+                "⚠️ После 3-го числа сумма задолженности увеличится."
             )
-            try:
-                await context.bot.send_message(chat_id=chat_id, text=text_message)
-                REMINDER_LAST_SENT[account_number] = now
-                sent_count += 1
-            except Exception as e:
-                print(f"❌ Ошибка отправки на {chat_id}: {e}")
+        elif day in [7, 9]:
+            text_message = (
+                f"Напоминаем, что срок оплаты за {info['month']} истекает 3-го числа.\n"
+                f"💳 Текущая задолженность: {abs(total)} руб.\n\n"
+                "Оплатить можно переводом на карту Т-Банк по номеру +79062385238 "
+                "(Валентина Савватиевна А.)\n\n"
+                "⚠️ После 3-го числа сумма задолженности увеличится."
+            )
+        elif day == 11:
+            text_message = (
+                f"📅 Сегодня 2 число!\n\n"
+                f"⚠️ У вас остаётся задолженность {abs(total)} руб.\n"
+                "С 3-го числа сумма долга будет увеличена согласно тарифу.\n\n"
+                "Просьба оплатить как можно скорее 🙏"
+            )
+        else:
+            continue
 
+        try:
+            await context.bot.send_message(chat_id=chat_id, text=text_message)
+            sent_count += 1
+            sent_to.append(f"{account_number}:{chat_id}")
+        except Exception as e:
+            print(f"❌ Ошибка отправки на {chat_id}: {e}")
+
+    # Логирование в Railway
     if sent_count > 0:
-        print(f"✅ Рассылка выполнена ({now.strftime('%d.%m.%Y %H:%M')}) — сообщений отправлено: {sent_count}")
+        print(f"✅ Рассылка завершена ({now.strftime('%d.%m.%Y %H:%M')}). "
+              f"Отправлено сообщений: {sent_count}")
+        print("📨 Рассылки получали:")
+        for s in sent_to:
+            print(f"  - {s}")
     else:
         print(f"⚠️ Рассылка выполнена ({now.strftime('%d.%m.%Y %H:%M')}) — сообщений не отправлено")
 # ================== ЗАПУСК БОТА ==================
 def main():
-    TOKEN = "8244050011:AAGP565NclU046a-WsP-nO8hNOcvkwQCh0U"  # советую хранить в .env
+    TOKEN = "8244050011:AAGP565NclU046a-WsP-nO8hNOcvkwQCh0U" # советую хранить в .env
     if not TOKEN:
         raise ValueError("⚠️ Токен не найден! Проверьте .env")
 
@@ -421,7 +441,6 @@ def main():
 
     app = Application.builder().token(TOKEN).build()
 
-    # -------------------- ОБРАБОТЧИК ДИАЛОГОВ --------------------
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -442,7 +461,6 @@ def main():
     app.add_handler(CommandHandler("refresh_rent", refresh_rent))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    # -------------------- ФОНОВЫЕ ОБНОВЛЕНИЯ --------------------
     async def auto_refresh_events(context: ContextTypes.DEFAULT_TYPE):
         global EVENTS
         EVENTS = load_events_from_sheets()
@@ -454,27 +472,13 @@ def main():
     app.job_queue.run_repeating(auto_refresh_events, interval=600, first=10)
     app.job_queue.run_repeating(auto_refresh_rent, interval=600, first=10)
 
-    # -------------------- НАСТРОЙКА РАССЫЛКИ --------------------
-    kaliningrad_tz = pytz.timezone("Europe/Kaliningrad")
+    target_time = time(hour=21, minute=10, tzinfo=kaliningrad_tz)
 
-    # Планируем рассылку на 7 октября 2025 в 20:40 и 9 октября 2025 в 14:00
-    send_times = [
-        datetime(2025, 10, 6, 20, 50, tzinfo=kaliningrad_tz),
-        datetime(2025, 10, 9, 14, 0, tzinfo=kaliningrad_tz),
-    ]
-
-    # Назначаем рассылки
-    for dt in send_times:
-        # Если бот был перезапущен и текущее время уже прошло — пропускаем
-        if datetime.now(kaliningrad_tz) > dt:
-            print(f"⚠️ Время {dt.strftime('%d.%m %H:%M')} уже прошло — пропускаем назначение.")
-            continue
-        app.job_queue.run_once(send_rent_reminders, when=dt)
-        print(f"📅 Рассылка назначена на {dt.strftime('%d.%m.%Y %H:%M')} (Калининград)")
+# Рассылка будет запускаться 24, 26, 28 и 2 числа каждого месяца
+    app.job_queue.run_daily(send_rent_reminders, time=target_time, days=(6, 7, 9, 11))
 
     print("🚀 Бот запущен и готов к работе!")
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
