@@ -412,7 +412,7 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
         print(f"⚠️ Рассылка выполнена ({now.strftime('%d.%m.%Y %H:%M')}) — сообщений не отправлено")
 # ================== ЗАПУСК БОТА ==================
 def main():
-    TOKEN = "8244050011:AAGP565NclU046a-WsP-nO8hNOcvkwQCh0U" # советую хранить в .env
+    TOKEN = "8244050011:AAGP565NclU046a-WsP-nO8hNOcvkwQCh0U"  # советую хранить в .env
     if not TOKEN:
         raise ValueError("⚠️ Токен не найден! Проверьте .env")
 
@@ -421,6 +421,7 @@ def main():
 
     app = Application.builder().token(TOKEN).build()
 
+    # -------------------- ОБРАБОТЧИК ДИАЛОГОВ --------------------
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -441,6 +442,7 @@ def main():
     app.add_handler(CommandHandler("refresh_rent", refresh_rent))
     app.add_handler(CallbackQueryHandler(button_handler))
 
+    # -------------------- ФОНОВЫЕ ОБНОВЛЕНИЯ --------------------
     async def auto_refresh_events(context: ContextTypes.DEFAULT_TYPE):
         global EVENTS
         EVENTS = load_events_from_sheets()
@@ -452,11 +454,27 @@ def main():
     app.job_queue.run_repeating(auto_refresh_events, interval=600, first=10)
     app.job_queue.run_repeating(auto_refresh_rent, interval=600, first=10)
 
-    target_time = time(hour=15, minute=35, tzinfo=kaliningrad_tz)
-    app.job_queue.run_daily(send_rent_reminders, time=target_time)
+    # -------------------- НАСТРОЙКА РАССЫЛКИ --------------------
+    kaliningrad_tz = pytz.timezone("Europe/Kaliningrad")
+
+    # Планируем рассылку на 7 октября 2025 в 20:40 и 9 октября 2025 в 14:00
+    send_times = [
+        datetime(2025, 10, 7, 20, 40, tzinfo=kaliningrad_tz),
+        datetime(2025, 10, 9, 14, 0, tzinfo=kaliningrad_tz),
+    ]
+
+    # Назначаем рассылки
+    for dt in send_times:
+        # Если бот был перезапущен и текущее время уже прошло — пропускаем
+        if datetime.now(kaliningrad_tz) > dt:
+            print(f"⚠️ Время {dt.strftime('%d.%m %H:%M')} уже прошло — пропускаем назначение.")
+            continue
+        app.job_queue.run_once(send_rent_reminders, when=dt)
+        print(f"📅 Рассылка назначена на {dt.strftime('%d.%m.%Y %H:%M')} (Калининград)")
 
     print("🚀 Бот запущен и готов к работе!")
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()
