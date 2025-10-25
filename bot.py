@@ -472,7 +472,7 @@ def main():
     app.job_queue.run_repeating(auto_refresh_events, interval=600, first=10)
     app.job_queue.run_repeating(auto_refresh_rent, interval=600, first=10)
 
-    target_time = time(hour=16, minute=00, tzinfo=kaliningrad_tz)
+    target_time = time(hour=17, minute=30, tzinfo=kaliningrad_tz)
     app.job_queue.run_daily(send_rent_reminders, time=target_time)  # без days!
     print("🚀 Бот запущен и готов к работе!")
     app.run_polling()
