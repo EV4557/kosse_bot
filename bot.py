@@ -360,7 +360,7 @@ async def restart_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
-    """Рассылка уведомлений об оплате аренды (24, 26, 28 и 2 числа каждого месяца)."""
+    """Рассылка уведомлений об оплате аренды (25, 27, 29 и 3 числа каждого месяца)."""
     now = datetime.now(kaliningrad_tz)
     day = now.day
     load_rent_sheet(force=True)
@@ -368,7 +368,7 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
     sent_to = []
 
     # Проверяем, нужен ли запуск сегодня
-    if day not in (6, 7, 9, 11):
+    if day not in (25, 27, 29, 3):
         print(f"ℹ️ Сегодня ({now.strftime('%d.%m.%Y')}) рассылка не запланирована.")
         return
 
@@ -389,7 +389,7 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
         total = info["total"]
 
         # Формируем текст в зависимости от дня месяца
-        if day == 6:
+        if day == 25:
             if total >= 0:
                 continue  # нет долга — не шлем
             text_message = (
@@ -399,7 +399,7 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
                 "Оплатить можно переводом на карту Т-Банк по номеру +79062385238 (Валентина Савватиевна А.).\n\n"
                 "⚠️ Если оплата не поступит до 3 числа, сумма задолженности увеличится."
             )
-        elif day in (7, 9):
+        elif day in (27, 29):
             if total >= 0:
                 continue  # нет долга — не шлем
             text_message = (
@@ -407,7 +407,7 @@ async def send_rent_reminders(context: ContextTypes.DEFAULT_TYPE):
                 "Пожалуйста, оплатите до 3 числа текущего месяца, чтобы избежать увеличения суммы долга.\n"
                 "Оплата возможна переводом на карту Т-Банк +79062385238."
             )
-        elif day == 11:
+        elif day == 3:
             if total >= 0:
                 continue  # долг отсутствует
             text_message = (
@@ -472,7 +472,7 @@ def main():
     app.job_queue.run_repeating(auto_refresh_events, interval=600, first=10)
     app.job_queue.run_repeating(auto_refresh_rent, interval=600, first=10)
 
-    target_time = time(hour=21, minute=10, tzinfo=kaliningrad_tz)
+    target_time = time(hour=16, minute=00, tzinfo=kaliningrad_tz)
     app.job_queue.run_daily(send_rent_reminders, time=target_time)  # без days!
     print("🚀 Бот запущен и готов к работе!")
     app.run_polling()
